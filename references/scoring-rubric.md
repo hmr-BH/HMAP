@@ -8,7 +8,7 @@
 2. **Core question (enforced)**: anchor everything to "if this project were handed to you, would you maintain it yourself? Why?" The total must match the answer. An answer of "no"/"never" with a high total ⇒ you were dazzled by surface discipline (tests/CI/docs) — apply gates and lower the score.
 3. **Black cat, white cat — equal treatment**: AI authorship, project size, and maintainer count are NEVER criteria; judge only whether the artifact obstructs human maintenance. READMEs are checked for promise fulfillment only (tidiness/ads/marketing/absence are not penalized). Top-calibration: a lovingly human-maintained project with why-comments, honest docs, and clear boundaries lands in the 90 tier (90-95); thin tests, a few big files, or occasional copy-paste are acceptable debt and do NOT justify dropping to the 80s unless they genuinely obstruct understanding or change.
 4. **Human-normal debt vs AI process fingerprints**:
-   - **Human-normal debt**: copy-paste, dead code, a few big files, a few dead exports — no heavy penalty while they don't significantly obstruct understanding or change. Copy-paste is heavily penalized only when **systemic** (≥3 groups AND every change must be synced across ≥2 call sites).
+   - **Human-normal debt**: copy-paste, dead code, a few big files, a few dead exports, semantic debt (SC/CV signals) — no heavy penalty while they don't significantly obstruct understanding or change. Copy-paste is heavily penalized only when **systemic** (≥3 groups AND every change must be synced across ≥2 call sites).
    - **AI process fingerprints**: AI-coding-process markers inlined **in source files**, AI debugging residue in hot paths, systemic god-files/god-functions — heavily penalized, can trigger hard gates. Top-level convention/doc files (AGENTS.md / CLAUDE.md / .github/instructions / copilot-instructions) are NOT fingerprints.
 5. Weights fixed: D1 design 25 / D2 traceability 30 / D3 readability 15 / D4 slop (reverse) 30.
 6. Anchors at 90/70/45/20; tiers come from the measurement→anchor tables; within a tier, base score + enumerated adjustments only.
@@ -21,7 +21,7 @@
 | Step | Action | Output |
 |---|---|---|
 | S1 | Parse args; inventory per SKILL.md Step 2/3; fix sampling scope (same depth across runs) | file list, sampling declaration |
-| S2 | Run the global measurement table M1-M13 | reproducible numbers |
+| S2 | Run the global measurement table M1-M15 | reproducible numbers |
 | S3 | Per dimension: measurements → tier table → base + adjustments | four raw scores |
 | S4 | Check hard gates G1/G3/G4 (multiple hits → lowest cap) | gate list |
 | S5 | Weighted = 0.25×D1 + 0.30×D2 + 0.15×D3 + 0.30×D4; total = min(weighted, cap); round to nine tiers | total + tier |
@@ -49,9 +49,48 @@ Measure before any scoring. Record `file:line` evidence along the way.
 | M11 | TODO/FIXME count & quality | Grep; spot-check for issue IDs / trigger conditions (Google Java style). Empty TODOs: ≥5 = 1 signal | D1/D4 |
 | M12 | Commented-out code blocks | Comment blocks containing executable statements (`;`, `if\|for\|return\|=`). **Doc comments and explanatory prose that merely mention code keywords do NOT count** (SonarSource S125) | D4 |
 | M13 | Circular dependencies | import/require graph; core-module cycles count (S7091/S7027; manually review JPA/polymorphism false positives) | D2 |
+| M14 | Semantic Coherence Audit (SCA) | **Fixed protocol — see the SCA section below**: run `references/semantic-surface.py` for extraction & candidates; adjudicate the top-15 most-referenced symbols (SI-1); review candidates (SI-2/3/4); convention census (CV). Outputs: `SI1_viol` / `SI2_unconsumed` / `SI2_trap` / `SI3_pairs` / `SI4_unrooted` / `CV` | D1/D2/D3/D4 |
+| M15 | Mutable global state census | Count module-level mutable variables, singletons with mutable fields, and init-order flags (`isInitialized`-style patterns). Exclude DI containers and immutable constants | D2 |
 
 > **RM candidacy**: functions ≥400 lines / files ≥1800 lines. The other M2/M3 buckets are distribution reference only, not penalty lines.
 > Measurement discipline: same commands and same sampling across runs; numbers recorded before impressions; the sheet ships with the report.
+
+---
+
+## Semantic Coherence Audit (SCA) — the M14 protocol
+
+Code communicates with humans through three channels: **names, contracts, and documentation**. Semantic coherence = four invariants; a violation of any of them misleads maintainers or forces call-site archaeology. This is the third evaluation axis alongside structure and residue. **All four invariants share ONE audit protocol — script-generated candidates, fixed-sample human adjudication, recorded verdicts. Never adjudicate by impression.**
+
+### The four invariants
+
+| Invariant | Definition | Typical violation |
+|---|---|---|
+| **SI-1 Name⇆Denotation** | A symbol's promised content/behavior must actually be inside it. Covers: type name vs its fields, function name vs its body, test name vs what it asserts | `LyricData` holding only metadata while the lyrics live in `LyricInput`; `get_total` returning an average |
+| **SI-2 Declaration⇆Consumption closure** | Declared contract elements (fields / params / config keys / enum branches / event names) must be consumed; consumed elements must be declared. Nasty variant — **selective consumption**: the same element declared at ≥2 levels but consumed at only one — a switch that looks live but is silently ignored | a `show` flag filtered at the top menu level but ignored inside `children` |
+| **SI-3 Concept single-source** | One domain concept has exactly one authoritative representation (one type / one name / one source of truth). Detector: type-name pairs sharing a domain token | `LyricData` vs `LyricInput` — which one is the authoritative lyric type? |
+| **SI-4 Self-evident vocabulary** | A symbol/enum value's meaning must be derivable from the code itself (name + nearby docs), without call-site archaeology | enum value `"cloud"` with no doc — discoverable only by grepping usages |
+
+**Convention census (CV)** — the fixed procedure for signal 13: sample 20 sites of one recurring concern (error handling / async pattern / state access); count distinct idioms; ≥3 idioms for the same concern = 1 CV violation.
+
+### Protocol (fixed — identical across runs)
+
+1. **Extract**: run `references/semantic-surface.py <root>` → semantic-surface inventory (exported types/enums + fields/values + reference counts) and candidate lists for SI-2/SI-3/SI-4. No runtime ⇒ manual extraction in the 10 largest files.
+2. **Adjudicate SI-1**: take the **top-15 most-referenced exported symbols** (types + public functions); judge each name against its content/behavior with `file:line` evidence. Tests included: sampled test names vs asserted behavior.
+3. **Review candidates**: SI-2/SI-3/SI-4 candidates adjudicated with exclusions — serialization/API payloads, dynamic key access, framework-mandated members, and documented public API surface do NOT count; SI-3 legitimate affix pairs (Request/Response, Input/Output, Query/Command, Create/Update, Read/Write...) do NOT count.
+4. **Count** into the measurement sheet: `SI1_viol` (of 15) / `SI2_unconsumed` / `SI2_trap` (selective-consumption instances) / `SI3_pairs` / `SI4_unrooted` / `CV`.
+
+### Thresholds (conservative; boundary calls follow rule 8)
+
+| Count | 1 D4 signal when | Enters D4 45-tier list when |
+|---|---|---|
+| SI1_viol | ≥2 | ≥5 |
+| SI2_unconsumed | ≥3 | ≥5 |
+| SI2_trap | ≥1 (every trap misleads a maintainer) | ≥3 |
+| SI3_pairs | ≥2 | ≥4 |
+| SI4_unrooted | ≥3 | ≥5 |
+| CV | ≥1 concern | ≥2 concerns |
+
+Dimension linkages: D1 (P_placeholder extension), D2 (yellow-zone evidence), D3 (misleading-name tier rows), D4 (SC/CV signal rows). **SC/CV violations never trigger hard gates** — they are locally fixable; at scale they pull the total down through D4's 45 tier. SC/CV signals are **semantic debt**: counted as ordinary signals regardless of authorship — never auto-classified as AI fingerprints.
 
 ---
 
@@ -106,7 +145,7 @@ The sole execution judge of "big but single-responsibility (no penalty) vs big a
 **Anchors**: 90 = architecture matches complexity, core promises all verified, decisions have technical reasons, real tests (even if thin); 70 = mostly holds, a few decorative abstractions or slightly exaggerated promises; 45 = architecture mismatched to the problem, multiple promises unfulfillable (especially "performance optimizations" that are actually slower), decisions feel like wishes; 20 = absurd design, promises comprehensively fail.
 
 **Measurement**:
-1. **Promise verification (core)**: list every promise; count `P_fail` (major promises verified false or inverted — e.g. "performance gain" that adds overhead; each with claim-site + code-site `file:line` pairs), `P_placeholder` (placeholder/TODO/throwing stub), verification rate P/C.
+1. **Promise verification (core)**: list every promise; count `P_fail` (major promises verified false or inverted — e.g. "performance gain" that adds overhead; each with claim-site + code-site `file:line` pairs), `P_placeholder` (placeholder/TODO/throwing stub; **also: declared-but-never-consumed contract elements that advertise a capability — half-implemented switches from M14's SI2_unconsumed/SI2_trap**), verification rate P/C.
 2. **Decorative abstractions (D)**: grep `interface|abstract class|Factory|Provider|Strategy|Protocol|Abstract[A-Z]`; judge each — "single implementation project-wide, no extension expectation" ⇒ D+1. **Exemptions (any one suffices ⇒ do NOT count): a test double/mock exists; ≥2 call sites use it polymorphically (`any P` / generic constraints); it guards a documented cross-layer boundary.**
 3. **Test safety**: from M7 — `T_placeholder` (per M7's definition), `T_ignore` (@Ignore/skip), `T_assert/T_file`.
 4. **Build/CI**: try building or read the CI config — "every commit auto-builds + tests with visible results"?
@@ -144,7 +183,7 @@ The sole execution judge of "big but single-responsibility (no penalty) vs big a
 - **ND_max** max nesting depth — *lens*: count only control-flow keywords (`if/guard/for/while/switch/catch`); a closure body counts as a fresh function boundary (restart from 0); declarative UI-builder nesting (SwiftUI ViewBuilder and similar) and chained modifiers NEVER count (Linux: >3 refactor; SonarSource S134/ESLint default 4; >5 red zone).
 - **Long parameter lists** — *lens*: only `func`/method signatures; constructors/initializers and declarative view builders excluded; count only **required parameters (no default value)**; commas inside closure/tuple types don't count (SIG ≤4 target, >7 watch).
 - With tooling: cyclomatic >10 / cognitive >15 unit counts (McCabe/Sonar — red flags for splitting only, combine with RM).
-- **ext_doc**: can the core dataflow be reconstructed from code alone, without external docs?
+- **ext_doc (two levels)**: ① dataflow level — can the core dataflow be reconstructed from code alone? ② symbol level — can core symbols' semantics be understood without call-site archaeology? **Yellow evidence**: M14's SI4_unrooted ≥1 at a core symbol, or SI3_pairs ≥2 (tracing a concept first requires discovering which representation is authoritative), or M15 mutable-global-state hubs ≥3 (hidden coupling through shared mutable state).
 
 **Measurement → tier** (big-but-single never enters yellow/red):
 
@@ -156,13 +195,13 @@ The sole execution judge of "big but single-responsibility (no penalty) vs big a
 | ND_max nesting | ≤3 | 4-5 | ≥6 |
 | Functions with >7 required params | 0 | ≤2 | ≥3 |
 | Circular deps (core) | none | non-core | present in core (manual review first) |
-| ext_doc needed | no | some modules | core unreconstructable from code, spans ≥3 files |
+| ext_doc needed (dataflow OR symbol level) | no | some modules / some core symbols | core unreconstructable from code, spans ≥3 files |
 
 **Tier counting**: all green ⇒ 90; **each yellow −2.5, rounded half up (1 yellow=88, 2=85, 3=83, 4=80)**; ≥5 yellows ⇒ examine as red zone (score as 1 red); 1 red ⇒ 45 (if the red is N_mixed ⇒ G1: D2=45 and the total is separately capped at 60); 2 reds ⇒ 40; ≥3 reds ⇒ 30.
 
 **Cognitive-load compound**: ND_max yellow (4-5) AND the same function branch-heavy (branches ≥6 or cyclomatic ≥10) ⇒ that function counts as 1 red (tier drops one level); only one of the two ⇒ stays yellow, −2 within tier; deep nesting AND mixed responsibilities ⇒ straight to 45.
 
-**Adjustments** (any tier, total adjustment within ±2; cap 95, floor 20): T_trace≤1 → +1; T_impact≤1 → +1; no global state → +1; core hard spots carry why-comments → +1; RM "borderline" (R=2) → −2.
+**Adjustments** (any tier, total adjustment within ±2; cap 95, floor 20): T_trace≤1 → +1; T_impact≤1 → +1; M15 = 0 (no mutable global state) → +1; core hard spots carry why-comments → +1; RM "borderline" (R=2) → −2.
 
 **Tie-breaks**: big files/long functions always go through RM before any tiering (single-responsibility never yellow/red, even at 3,000 lines); "big-but-clear vs big-and-mixed" disputes settle by the human arbiter (read & safely change without external docs); boundary values follow rule 8 (record + midpoint where tiers straddle); suspected false-positive cycles ⇒ manual review first; pick table values within a tier; core path unreadable ⇒ 70 with declared low confidence.
 
@@ -192,7 +231,7 @@ The sole execution judge of "big but single-responsibility (no penalty) vs big a
    - `/// Whether the resource is currently disabled.` → **R**
    - Copyright/license file-header block → **excluded from the sample**
    Record per-comment classifications in the report's evidence appendix.
-3. **Name-behavior consistency**: spot-check function names against bodies.
+3. **Name-behavior consistency (fixed procedure, not impression)**: adjudicate the M14 SI-1 sample — the top-15 most-referenced exported symbols (types + public functions), name vs content/behavior, each with `file:line` evidence; `SI1_viol` and `SI4_unrooted` feed the tier table below.
 4. **Public API contract docs**: sample 10 public functions for contract docstrings (what / preconditions / side-effects / exceptions, Effective Java Item 56); penalize only when missing docs FORCE callers to read implementations.
 5. TODO quality (M11); line width (>120 physical columns; CJK by logical width).
 
@@ -202,8 +241,8 @@ The sole execution judge of "big but single-responsibility (no penalty) vs big a
 |---|---|---|
 | G<5 AND R-share <15% AND S≤3 AND H=0 AND I≥5 (fewer than 10 comments total ⇒ "core hard spots all have why-comments AND R/H=0") | 90 | 90 |
 | G=5~15 OR R-share 15%~40% OR H≤1 | 70-85 | 85 |
-| G≥15 OR R-share >40% OR H≥3 OR S≥8 (body comments) OR missing API contract docs force reading implementations (≥3 of sampled) | 45 | 55 |
-| R overwhelming majority AND H≥5, OR misleading names, OR readable only via AI | 20 | 30 |
+| G≥15 OR R-share >40% OR H≥3 OR S≥8 (body comments) OR missing API contract docs force reading implementations (≥3 of sampled) OR **SI1_viol ≥2** OR **SI4_unrooted ≥3** | 45 | 55 |
+| R overwhelming majority AND H≥5, OR misleading names (**SI1_viol ≥4**), OR readable only via AI | 20 | 30 |
 
 **Adjustments** (cap 95, floor 20): G<3 with fully semantic names → +1; core hard spots all carry why-comments → +1; zero restatements → +1; comment density <5% with high complexity → −2; density >40% dominated by short comments (AI-template tone) → −2; CJK projects: double-check comment-code consistency → feeds the H count.
 
@@ -213,7 +252,7 @@ The sole execution judge of "big but single-responsibility (no penalty) vs big a
 
 ## D4: AI slop & wishful-thinking residue (weight 30, reverse scoring)
 
-**Definition**: how much **AI-produced residue that obstructs human maintenance** the project contains — NOT "AI-written code" itself. AI generation/assistance/toolchains are never penalized; only artifacts humans can't accept (structural gods, hot-path debug residue, promise betrayal, systemic copy-paste, inlined AI process markers, hallucinated comments). Higher raw score = less slop.
+**Definition**: how much **AI-produced residue that obstructs human maintenance** the project contains — NOT "AI-written code" itself. AI generation/assistance/toolchains are never penalized; only artifacts humans can't accept (structural gods, hot-path debug residue, promise betrayal, systemic copy-paste, inlined AI process markers, hallucinated comments, semantic incoherence). Higher raw score = less slop.
 
 **Signals (all from the measurement table + D1/D3 by-products; no new measurement)**:
 
@@ -229,8 +268,10 @@ The sole execution judge of "big but single-responsibility (no penalty) vs big a
 | CD commented-out code blocks | M12 | ≥3 → 45 |
 | DZ dead code / unused exports | per-symbol reference checks | human-normal debt; ≥1 = 1 signal |
 | TODO empty/stale | M11 | ≥5 = 1 signal |
+| SC semantic-coherence violations | M14's SI1/SI2/SI3/SI4 | per-invariant thresholds in the SCA section (each crossed invariant = 1 signal, max 4); **SC signals ≥3 → 45** |
+| CV convention entropy | M14's convention census (signal 13's procedure) | ≥1 concern = 1 signal; **CV ≥2 concerns → 45** |
 
-**Counting**: each category with ≥1 hit = 1 signal (multiple hits in one category still 1 signal, but over-threshold hits trigger the 45 tier directly). **Human-normal debt** = non-systemic CP, best-effort catches, E_debug, DZ, TODOs, occasional big files. **AI process fingerprints** = M, E_ai, W, systemic CP, G1 hits, H, error-swallowing catches; ambiguous ⇒ fingerprint (conservative).
+**Counting**: each category with ≥1 hit = 1 signal (multiple hits in one category still 1 signal, but over-threshold hits trigger the 45 tier directly). **Human-normal debt** = non-systemic CP, best-effort catches, E_debug, DZ, TODOs, occasional big files, **SC/CV semantic debt** (source-agnostic: counted as ordinary signals, never auto-fingerprints). **AI process fingerprints** = M, E_ai, W, systemic CP, G1 hits, H, error-swallowing catches; ambiguous ⇒ fingerprint (conservative).
 
 **Measurement → tier**:
 
@@ -239,7 +280,7 @@ The sole execution judge of "big but single-responsibility (no penalty) vs big a
 | ≤2 signals, all human-normal debt, zero fingerprints | 90 | 90 |
 | 3~4 signals, scattered, all human-normal debt, zero fingerprints | 70-85 | 88 − signals×2 |
 | 1 isolated fingerprint (no other signals) | 70-85 | 80 |
-| Any of: M≥3 / E_ai≥3 / W≥2 / systemic CP≥3 / C≥5 / H≥3 / CD≥3 / G1 hit / 1 fingerprint + other signals / ≥5 total signals | 45 | 55 |
+| Any of: M≥3 / E_ai≥3 / W≥2 / systemic CP≥3 / C≥5 / H≥3 / CD≥3 / **SC signals ≥3 / SI2_unconsumed ≥5 / SI2_trap ≥3 / SI1_viol ≥5 / SI3_pairs ≥4 / SI4_unrooted ≥5 / CV ≥2 concerns** / G1 hit / 1 fingerprint + other signals / ≥5 total signals | 45 | 55 |
 | Flood: M across the core / E_ai≥5 (→G4) / systemic CP ≥6 groups / W≥4 / H≥5 | 20 | 30 |
 
 **Adjustments** (cap 95, floor 20): zero signals → +1; signals concentrated in one file (2 categories) → −3; comments all AI-template tone → −3; one major wishful betrayal ⇒ straight to the 45 tier, no stacking.
@@ -272,13 +313,13 @@ When the subject's profile resembles a row below, the score should land in the r
 ## Consistency self-check (two runs converge within ≤3)
 
 Totals differing by >3 ⇒ check in order (**no bargaining over totals**):
-1. Compare M1-M13 sheets (especially M8/M9 exclusion lenses, M10 wordlist) ⇒ rerun commands on mismatch.
+1. Compare M1-M15 sheets (especially M8/M9 exclusion lenses, M10 wordlist, M14 adjudication sample) ⇒ rerun commands on mismatch.
 2. Compare sampling scopes ⇒ the deeper one wins.
 3. Compare RM domain assignments ⇒ per-sub-domain evidence + binding precedents.
 4. Compare red/yellow/green counts and tiers ⇒ **compare both sides' boundary records item by item and re-verify the evidence** (rule 8).
-5. For D3 divergence: first confirm both runs used the **same comment sampling frame and the same decision tree**; then compare per-comment classifications.
+5. For D3 divergence: first confirm both runs used the **same comment sampling frame and the same decision tree**; then compare per-comment classifications. For SC divergence: confirm both ran the same SCA protocol (same tool version, same top-15 sample, same exclusions).
 6. Compare adjustment triggers (enumerated, reproducible).
 7. Still divergent ⇒ take the stricter (lower) score and declare the disagreement.
 8. **60-split review**: if two evaluators land on opposite sides of 60, return to the core question "would you maintain it yourself" to arbitrate the side — the answer decides the side, mechanical scores follow.
 
-**Main variance sources and their seals**: responsibility mixing ⇒ RM protocol (enumeration + counting + precedents + arbiter); comment quality ⇒ fixed sampling frame + decision tree + I/R/S/H counts; copy-paste/wishes/AI markers ⇒ fixed definitions (M5 procedure + group definition, systemic "needs syncing" lens, P_fail, M8 narrowed list, M9 exclusion lens); big-file penalties ⇒ "big but single-responsibility never yellow/red"; qualitative judgments ⇒ within-tier ±5 with evidence and boundary records only.
+**Main variance sources and their seals**: responsibility mixing ⇒ RM protocol (enumeration + counting + precedents + arbiter); comment quality ⇒ fixed sampling frame + decision tree + I/R/S/H counts; copy-paste/wishes/AI markers ⇒ fixed definitions (M5 procedure + group definition, systemic "needs syncing" lens, P_fail, M8 narrowed list, M9 exclusion lens); semantic coherence ⇒ SCA fixed protocol (script candidates + top-15 adjudication sample + recorded verdicts + exclusion rules); big-file penalties ⇒ "big but single-responsibility never yellow/red"; qualitative judgments ⇒ within-tier ±5 with evidence and boundary records only.

@@ -1,12 +1,14 @@
 # AI slop signal catalog
 
-The forensics list for D4 (AI slop & wishful-thinking residue). Each signal gives identification, counter/positive examples, and scoring linkage. **Penalty lenses and measurement-table definitions (M1-M13) follow scoring-rubric.md** — this file only decides "recognized as what, filed where".
+The forensics list for D4 (AI slop & wishful-thinking residue). Each signal gives identification, counter/positive examples, and scoring linkage. **Penalty lenses and measurement-table definitions (M1-M15) follow scoring-rubric.md** — this file only decides "recognized as what, filed where".
 
 **Judgment principle**: not "smells like AI ⇒ penalize", but "does it obstruct human maintenance". Stray residue is normal development debris; scaled, concentrated residue that obstructs reading and changing is slop.
 
 **Core distinction**:
-- **Human-normal debt** (light penalty; never alone drops a project out of the 90s) = copy-paste, dead code, a few big files, a few dead exports — universal in human projects.
+- **Human-normal debt** (light penalty; never alone drops a project out of the 90s) = copy-paste, dead code, a few big files, a few dead exports, **semantic debt (SC/CV signals 12/13/15/16/17)** — universal in human projects.
 - **AI process fingerprints** (heavy penalty; can trigger hard gates) = AI-coding-process markers inlined in source, AI debugging residue in hot paths, systemic god-files/god-functions.
+
+**Semantic signals are source-agnostic**: never ask whether AI or a human wrote them — ask only whether they mislead a maintainer or force call-site archaeology. They never trigger hard gates and are never auto-classified as AI fingerprints.
 
 ---
 
@@ -146,20 +148,30 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 
 ---
 
-## Signal 12: name-behavior mismatch
+## Signal 12: name-behavior mismatch (SI-1 name⇆denotation)
 
-**Identify**: function/variable/file names implying behavior the implementation doesn't have — directly misleading readers.
+**Identify**: a symbol's name promises content/behavior the implementation doesn't deliver — directly misleading readers. Covers type name vs its fields, function name vs its body, test name vs what it asserts.
 
-**Counter-example**: `def get_total(items): return sum(items) / len(items)` — named "total", actually "average".
-**How**: spot-check function names against bodies; file/directory names against actual contents.
+**Fixed procedure (M14 SI-1 — never impressionistic spot-checks)**: run `references/semantic-surface.py` → take the **top-15 most-referenced exported symbols** (types + public functions; sampled test names included); adjudicate each name against its actual content/behavior, one by one, with `file:line` evidence; record every verdict. Confirmed mismatches count as `SI1_viol`.
+
+**Counter-example**: `LyricData` holding only track metadata while the actual lyrics live in `LyricInput` — the authoritative "lyric data" name sits on the wrong type; `def get_total(items): return sum(items) / len(items)` — named "total", actually "average".
+**Positive example**: `TrackMetadata` holding metadata, `LyricLine` holding lyric lines — the name says what's inside; or a deliberate rename with zero stale references left.
+
+**Linkage**: `SI1_viol` ≥2 = 1 SC signal (D4), ≥5 ⇒ D4 45 tier; D3: ≥2 ⇒ 45 tier, ≥4 ⇒ 20 tier.
 
 ---
 
-## Signal 13: patchwork feel & style whiplash
+## Signal 13: patchwork feel & convention entropy (CV)
 
-**Identify**: multiple naming/indentation/comment styles coexisting in one file (`fetch_data`/`FetchData`/`fetchData` mixed), or the same problem solved with completely different approaches in different files — seams of multiple AI generation rounds.
+**Identify**: one recurring concern solved with multiple mutually exclusive idioms across the project — naming styles mixed (`fetch_data`/`FetchData`/`fetchData`), errors thrown in one module, Result-boxed in another, silently nil-ed in a third; state via singleton here, DI there, raw global elsewhere. Seams of multiple unshepherded generation rounds.
 
-**How**: grep naming-style statistics for same-kind symbols; ≥2 mutually exclusive conventions in one file ⇒ confirmed.
+**Fixed procedure (convention census, M14 CV)**: pick ONE recurring concern (error handling / async pattern / state access / naming style); sample **20 sites** of that concern at even intervals across the source tree; count distinct idioms; **≥3 idioms for the same concern = 1 CV violation**. Repeat per concern; record sampled sites and idiom counts.
+
+**Counter-example**: async via completion handlers at 8 sites, async/await at 8, reactive publishers at 4 — three idioms for one concern.
+**Positive example**: one dominant idiom with occasional justified, documented deviations.
+**Exclusions (not signals)**: language-mandated duality (e.g. Swift `throws` + `Result` at API boundaries), framework-required patterns, a documented migration in progress.
+
+**Linkage**: CV ≥1 concern = 1 D4 signal; CV ≥2 concerns ⇒ D4 45 tier. **≥2 mutually exclusive naming conventions within ONE file ⇒ confirmed even without the census.**
 
 ---
 
@@ -174,6 +186,51 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 
 ---
 
+## Signal 15: broken contract (SI-2 declaration⇆consumption closure)
+
+**Identify**: a declared contract element — field, parameter, config key, enum branch, event name — that no code path consumes; or a consumed element that was never declared. Nastiest variant — **selective-consumption trap**: the same element declared at ≥2 levels but honored at only one, so a switch that looks live is silently ignored somewhere.
+
+**Fixed procedure (M14 SI-2)**: `references/semantic-surface.py` lists exported fields with zero read sites as candidates; adjudicate each against the exclusions; count `SI2_unconsumed` (dead contract elements) and `SI2_trap` (selective-consumption instances, each recorded as an honored-level + ignored-level `file:line` pair).
+
+**Counter-example**: a menu-item `show: Bool` honored by the top-level filter but ignored when the item nests inside `children` — setting `show = false` on a child compiles, looks supported, and does nothing; the maintainer discovers the lie only by testing or archaeology.
+**Positive example**: every declared field has at least one reader; an intentionally reserved field carries a doc saying so (`/// reserved for v2; not yet consumed`).
+
+**Exclusions (not signals)**: serialization/API payloads mirroring a wire format, dynamic key access, framework-mandated members, documented public API surface consumed by downstream clients.
+
+**Linkage**: `SI2_unconsumed` ≥3 = 1 SC signal, ≥5 ⇒ D4 45 tier; `SI2_trap` ≥1 = 1 SC signal (every trap misleads someone), ≥3 ⇒ 45 tier; half-implemented switches also feed D1's `P_placeholder` — a capability the contract advertises but the code doesn't deliver.
+
+---
+
+## Signal 16: concept ghosting (SI-3 concept single-source)
+
+**Identify**: one domain concept materialized as ≥2 parallel representations with no declared authority — two type names sharing a domain token, two enums for the same axis, two competing "sources of truth". Maintainers can't tell which one to read, extend, or trust.
+
+**Fixed procedure (M14 SI-3)**: the script lists type-name clusters sharing a ≥4-character domain token (tokens appearing in 2–8 type names — big homogeneous naming families are not ghosting); adjudicate each cluster pair-wise — is one member clearly authoritative (the others unmistakable views/DTOs/projections referencing it)? A cluster with no authoritative member ⇒ 1 `SI3_pairs` (count clusters, not pair permutations).
+
+**Counter-example**: `LyricData` and `LyricInput` coexisting — both look like "the lyric type"; any lyric-handling fix must first answer "which one is real?" before touching code.
+**Positive example**: `LyricDocument` as the single authority, with `LyricLineView` unmistakably its view projection (named and documented as such, holding a reference to the authority).
+
+**Exclusions (legitimate affix pairs, not signals)**: Request/Response, Input/Output, Query/Command, Create/Update, Read/Write, Get/Set, Add/Remove, Start/Stop, Open/Close — paired roles of ONE operation, not competing authorities.
+
+**Linkage**: `SI3_pairs` ≥2 = 1 SC signal, ≥4 ⇒ D4 45 tier; ≥2 ⇒ D2 ext_doc yellow evidence (tracing a concept first requires discovering which representation is authoritative).
+
+---
+
+## Signal 17: rootless vocabulary (SI-4 self-evident vocabulary)
+
+**Identify**: a symbol / enum value / config key whose meaning cannot be derived from the code itself — name and nearby docs say nothing; understanding requires grepping every call site or runtime experiments (call-site archaeology).
+
+**Fixed procedure (M14 SI-4)**: the script lists enum values (and exported symbols) outside common vocabulary carrying no comment within ±5 lines; adjudicate each — can a maintainer state what it means from the code alone? No ⇒ 1 `SI4_unrooted`.
+
+**Counter-example**: enum case `"cloud"` in a lyrics-source enum with no doc — cloud what? remote service? placeholder? Discoverable only by tracing every switch over it.
+**Positive example**: `case cloud // lyrics fetched from the network-disk share` — one line roots it; self-evident values (`case local`, `case embedded`) need nothing.
+
+**Exclusions (not signals)**: standard vocabulary of the project's field (`vertex` in a graphics project), framework-conventional names, values documented at the declaration site.
+
+**Linkage**: `SI4_unrooted` ≥3 = 1 SC signal, ≥5 ⇒ D4 45 tier; D3: ≥3 ⇒ 45 tier; ≥1 at a core symbol ⇒ D2 ext_doc yellow evidence.
+
+---
+
 ## Aggregate judgment
 
 | Signal density | D4 reference | Total impact (weight 30) |
@@ -183,6 +240,6 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 | At scale (≥5, or one major wish / AI fingerprint) | 45-60 | heavy drag, possible gates |
 | Flood (AI fingerprints everywhere) | ≤40 | gates trigger, total under 50 |
 
-**Note**: D4 weighs 30. One major wish or AI fingerprint can cost a whole tier; hard gates cap the total directly (G1→60, G3→45, G4→45, G1+G3/G4→40) — G3/G4/combo sit below the 60 line, G1 at the pass-line edge — making "AI fingerprints at scale = fail = unfit for human maintenance" hold as the 60-split. **Surface-neat but absurdly designed projects: don't be fooled by comments/docs/naming/test volume — return to signal 1 (wishes), signals 2/3 (AI fingerprints), signal 4 (structural gods) and punish there.** Detailed tiers: scoring-rubric.md D4.
+**Note**: D4 weighs 30. One major wish or AI fingerprint can cost a whole tier; hard gates cap the total directly (G1→60, G3→45, G4→45, G1+G3/G4→40) — G3/G4/combo sit below the 60 line, G1 at the pass-line edge — making "AI fingerprints at scale = fail = unfit for human maintenance" hold as the 60-split. **Surface-neat but absurdly designed projects: don't be fooled by comments/docs/naming/test volume — return to signal 1 (wishes), signals 2/3 (AI fingerprints), signal 4 (structural gods) and punish there.** **Semantic debt (signals 12/13/15/16/17) is source-agnostic and never gate-triggering** — at scale it drags the total through D4's 45 tier (SC ≥3 signals / CV ≥2 concerns). Detailed tiers: scoring-rubric.md D4.
 
 **Evidence format**: every finding in the report follows `file:line — signal N (<signal name>): <description>`.

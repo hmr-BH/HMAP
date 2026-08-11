@@ -17,7 +17,7 @@ HMAP evaluates project code in depth from multiple angles:
 - README promises that don't match actual implementation
 - Temporary AI-generation markers and debug code left in production
 
-The assessment is built on **13 objective metrics** and **hard structural gates** — it rejects vague "overall it's fine" judgments. If a project scores below 60, human programmers will find maintaining it confusing and painful.
+The assessment is built on **15 objective metrics** (including the M14 Semantic Coherence Audit: names, contracts, concepts, vocabulary) and **hard structural gates** — it rejects vague "overall it's fine" judgments. If a project scores below 60, human programmers will find maintaining it confusing and painful.
 
 ## Scoring Guide
 
@@ -85,10 +85,13 @@ Optional parameters:
 
 ```
 HMAP/
-├── SKILL.md               # Workflow & report template
+├── SKILL.md                  # Workflow & report template
 ├── references/
-│   ├── scoring-rubric.md  # M1-M13 metrics table & hard gates
-│   └── ai-slop-signals.md # 14 AI low-quality signals
+│   ├── scoring-rubric.md     # M1-M15 metrics table, SCA protocol & hard gates
+│   ├── ai-slop-signals.md    # 17 AI low-quality / semantic-debt signals
+│   ├── golden-example.md     # Full worked scoring example
+│   ├── cp-detect.py          # Copy-paste group detector (M5)
+│   └── semantic-surface.py   # Semantic-surface extractor for the SCA protocol (M14)
 ├── LICENSE
 └── README.md
 ```

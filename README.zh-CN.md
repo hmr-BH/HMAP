@@ -17,7 +17,7 @@ HMAP 会从多个角度对项目代码进行深入评估：
 - README文档承诺与实现行为不一致
 - AI 生成过程中的临时标记、调试代码直接残留在生产环境
 
-评估基于 13 项客观指标与硬性结构闸门，不接受"总体还行"的模糊判断。如果项目低于 60 分，说明人类程序员来维护该项目会感受到困惑与艰难。
+评估基于 15 项客观指标（含 M14 语义一致性审计：名实、契约、概念、词汇四个不变量）与硬性结构闸门，不接受"总体还行"的模糊判断。如果项目低于 60 分，说明人类程序员来维护该项目会感受到困惑与艰难。
 
 ## 评分说明
 
@@ -85,10 +85,13 @@ Copy-Item references\*.md "$dst\references\" -Force
 
 ```
 HMAP/
-├── SKILL.md              # 工作流与报告模板
+├── SKILL.md                 # 工作流与报告模板
 ├── references/
-│   ├── scoring-rubric.md # M1-M13 测量表与硬闸门
-│   └── ai-slop-signals.md # 14 类 AI 低质信号
+│   ├── scoring-rubric.md    # M1-M15 测量表、SCA 语义一致性协议与硬闸门
+│   ├── ai-slop-signals.md   # 17 类 AI 低质 / 语义债务信号
+│   ├── golden-example.md    # 完整打分示例
+│   ├── cp-detect.py         # 复制粘贴分组检测器（M5）
+│   └── semantic-surface.py  # SCA 协议语义表面提取器（M14）
 ├── LICENSE
 └── README.md
 ```

@@ -1,7 +1,7 @@
 ---
 name: human-maintainability
-version: 1.0.2
-description: "Assess a programming project's HUMAN maintainability (HMAP): 0-100 score, nine-tier verdict, per-dimension scores, and file:line evidence — built to catch vibe-coding / AI-generated slop. Triggers: assess maintainability / rate this project / code quality score / readability score / AI slop detection / vibe coding check / HMAP / human maintainability / 评估项目可维护性 / 给项目打分 / 代码质量评估 / 可读性评分 / AI屎山检测 / vibe coding 体检 / 是否适合人类维护. Anti-trigger: the user asks to fix, refactor, optimize, or write code — that is a different task; this skill only assesses, never modifies."
+version: 1.1.0
+description: "Assess a programming project's HUMAN maintainability (HMAP): 0-100 score, nine-tier verdict, per-dimension scores, and file:line evidence — built to catch vibe-coding / AI-generated slop, including semantic incoherence (name/contract/concept/vocabulary drift). Triggers: assess maintainability / rate this project / code quality score / readability score / AI slop detection / vibe coding check / semantic consistency check / HMAP / human maintainability / 评估项目可维护性 / 给项目打分 / 代码质量评估 / 可读性评分 / AI屎山检测 / vibe coding 体检 / 是否适合人类维护 / 语义一致性. Anti-trigger: the user asks to fix, refactor, optimize, or write code — that is a different task; this skill only assesses, never modifies."
 ---
 
 # human-maintainability (HMAP)
@@ -28,7 +28,7 @@ Human Maintainability Assessment of Programming Projects — scores whether a pr
 | D3 Human readability & self-explanation | 15 | Does the code explain itself? Do names/comments convey "why", or are they decorative / written for AI? |
 | D4 AI slop & wishful-thinking residue (reverse) | 30 | Promise betrayal, over-engineering, source-inlined AI process markers, structural gods (big AND mixed), systemic copy-paste, debug residue, hallucinated comments — more residue, lower score |
 
-Score each dimension 0-100, weight-sum, then apply structural hard gates. **Detailed rules (M1-M13 measurement table, tier mapping, RM responsibility-mixing protocol, tie-breaks): [`references/scoring-rubric.md`](references/scoring-rubric.md); signal catalog: [`references/ai-slop-signals.md`](references/ai-slop-signals.md); worked scoring example: [`references/golden-example.md`](references/golden-example.md).**
+Score each dimension 0-100, weight-sum, then apply structural hard gates. Semantic coherence (names telling the truth, contracts closed, concepts single-sourced, vocabulary self-evident) is audited by the fixed SCA protocol (M14) and feeds all four dimensions — it is the third evaluation axis alongside structure and residue. **Detailed rules (M1-M15 measurement table, tier mapping, SCA semantic-coherence protocol, RM responsibility-mixing protocol, tie-breaks): [`references/scoring-rubric.md`](references/scoring-rubric.md); signal catalog: [`references/ai-slop-signals.md`](references/ai-slop-signals.md); worked scoring example: [`references/golden-example.md`](references/golden-example.md).**
 
 > **Structural hard gates (pass-line verdicts)**: structural facts that make human maintenance impossible or infeasible hard-cap the total — core god-function/god-file that is also responsibility-mixed → **60** (pass-line edge); source-inlined AI process markers at scale → **45**; AI debugging residue in hot paths ≥5 (coordinate/offset special-cases, magic offsets, embedded debugging narratives, probe residue; **ordinary bare printlns excluded**) → **45**; **G1 together with G3/G4 → 40**. Dimension scores may not lift the total above a cap. **Gates judge structure only — never size, headcount, or AI authorship**; top-level convention files (AGENTS.md/CLAUDE.md etc.) are not AI process markers.
 
@@ -78,7 +78,8 @@ Must-read regardless of size: README, build/package entry, entry file, largest s
 
 ### Step 4: per-dimension forensics
 
-- **Measure first (mandatory before scoring)**: run M1-M13 from the rubric's global measurement table and fill the sheet. **Measured values decide tiers — before impressions.**
+- **Measure first (mandatory before scoring)**: run M1-M15 from the rubric's global measurement table and fill the sheet. **Measured values decide tiers — before impressions.**
+- **Semantic Coherence Audit (SCA, M14)**: run `references/semantic-surface.py <root>` → adjudicate the top-15 most-referenced symbols (SI-1 names), review SI-2/SI-3/SI-4 candidates against the exclusion rules, run the 20-site convention census (CV); record `SI1_viol / SI2_unconsumed / SI2_trap / SI3_pairs / SI4_unrooted / CV` in the sheet. Never adjudicate by impression.
 - **Promise verification (mandatory)**: list README/doc promises → verify each in code (claiming "performance gains" while only adding abstraction layers, claiming "extensible" with no extension points ⇒ major wish evidence). README: promises only; tidiness/ads/absence not penalized.
 - **Responsibility mixing via the RM protocol**: every ≥400-line function / ≥1800-line file goes through RM (enumerate domains → count → precedents → arbiter) for "single responsibility vs mixed". Big-but-single is not penalized; bloat is.
 - **Boundary decisions**: when a measurement lands on a boundary or signals conflict, record a boundary decision per rubric rule 8 (object / both-side reasoning / final choice / evidence) — no systematic rounding to either side.
@@ -105,7 +106,7 @@ Must-read regardless of size: README, build/package entry, entry file, largest s
 
 **Total: XX/100 — <tier verdict>**
 
-Scope: N source files, M read (depth: light/medium/deep), confidence: high/medium/low. Measurement sheet: key M1-M13 values (≤5 lines).
+Scope: N source files, M read (depth: light/medium/deep), confidence: high/medium/low. Measurement sheet: key M1-M15 values (≤5 lines).
 
 ### Dimension scores
 
