@@ -1,264 +1,284 @@
-# 分维度打分标准（scoring-rubric）
+# Scoring rubric (per-dimension)
 
-> **测量驱动版**：本版的核心是「先测量 → 查表定档 → 再 ±5 微调」，目标**同一项目两次独立评估总分差 ≤3 分**。所有阈值锚定公开研究（来源以作者/组织名标注，如 SIG、SonarSource、NASA/JPL），测量值决定档位，定性判断只能在档内按枚举条件微调，**禁止凭印象跨档**。
+> **Measurement-driven**: measure → look up the tier → adjust ±5 within the tier. Goal: two independent evaluations of the same project differ by ≤3 total points. Thresholds anchor to public research (cited by author/org: SIG, SonarSource, NASA/JPL). **Measurements decide tiers; qualitative judgment may only adjust within a tier — never jump tiers by impression.**
 
-## 总则（打分前必读）
+## General rules (read before scoring)
 
-1. **这是人类可读 & 可维护性评估，不是代码规范审查。** 命名一致、注释齐全、DRY、文档完整、测试规范——这些"规范"本身一律不加分；只有当它们真正让人类更容易理解与维护时才加分。
-2. **核心判据（强制执行）**：全程锚定「这个项目交给你，你愿意亲自维护它吗？为什么？」，总分必须与该答案一致。答案为"不愿意/不可能"而总分偏高 → 被工程表面（测试/CI/文档纪律）迷惑，须按硬闸门封顶并下调。
-3. **黑猫白猫、一视同仁**：不排斥 AI 写代码、不排斥大项目。AI 来源、项目体量、维护者人数**永不作为判据**；只评"产物是否妨碍人类维护"。README 只看承诺是否实现（整洁度/广告/营销/缺失一律不扣）。
-4. **区分「人类正常债务」与「AI 过程指纹」**：
-   - **人类正常债务**：复制粘贴、死代码、个别大文件、个别死导出——只要不显著妨碍理解与修改，**不重罚**，不因此降出 90 档。复制粘贴只有在**系统性**（≥3 组且每次改动需跨 ≥2 处调用点同步修改）时才重罚。
-   - **AI 过程指纹**：**源码内联**的 AI 编码过程标记、AI 排查残留混入热路径、系统性 god-file/god-function——**重罚**，触发硬闸门。**顶层约定与文档文件（AGENTS.md/CLAUDE.md/.github/instructions/copilot-instructions）不是指纹**。
-5. 权重固定：设计合理性与技术诚实性 25 / 可追踪性与心智负担 30 / 人类可读性与自我解释性 15 / AI 屎山与许愿痕迹（反向）30。
-6. 锚点用 90/70/45/20 四档；**档位由「测量值→锚点映射」决定**，档内按「基础分 + 枚举微调」取整数。
-7. 证据不足时取 70 基线并声明低置信度，不得虚高。
-8. **顶端校准**：真正由人类精心维护、注释讲"为什么"、文档诚实、结构边界清晰的优质项目落 **90 档（90-95）**。测试偏薄、个别大文件、个别复制粘贴等可接受债务**不构成降到 80 档的理由**，除非实际妨碍人类理解与修改。
-9. **客观测量优先**：能用 Glob/Grep/Bash 拿到的数值一律查表定档；拿不到数值的信号按核查清单定性，且只允许影响档内 ±5 微调。测量后核对口径（注释是否误计、大文件是否其实职责单一——后者由 RM 协议裁决、Grep 是否被注释污染），口径错则重测。
-10. **统一保守**：测量值落边界、或信号冲突时，一律取**较低档**；所有定性判定必须带 `文件:行号` 证据，无证据按"信号不成立"处理。
+1. **This is a human readability & maintainability assessment, not a style-compliance review.** Naming consistency, comment coverage, DRY, documentation completeness earn no points by themselves — only when they genuinely help humans understand and maintain.
+2. **Core question (enforced)**: anchor everything to "if this project were handed to you, would you maintain it yourself? Why?" The total must match the answer. An answer of "no"/"never" with a high total ⇒ you were dazzled by surface discipline (tests/CI/docs) — apply gates and lower the score.
+3. **Black cat, white cat — equal treatment**: AI authorship, project size, and maintainer count are NEVER criteria; judge only whether the artifact obstructs human maintenance. READMEs are checked for promise fulfillment only (tidiness/ads/marketing/absence are not penalized). Top-calibration: a lovingly human-maintained project with why-comments, honest docs, and clear boundaries lands in the 90 tier (90-95); thin tests, a few big files, or occasional copy-paste are acceptable debt and do NOT justify dropping to the 80s unless they genuinely obstruct understanding or change.
+4. **Human-normal debt vs AI process fingerprints**:
+   - **Human-normal debt**: copy-paste, dead code, a few big files, a few dead exports — no heavy penalty while they don't significantly obstruct understanding or change. Copy-paste is heavily penalized only when **systemic** (≥3 groups AND every change must be synced across ≥2 call sites).
+   - **AI process fingerprints**: AI-coding-process markers inlined **in source files**, AI debugging residue in hot paths, systemic god-files/god-functions — heavily penalized, can trigger hard gates. Top-level convention/doc files (AGENTS.md / CLAUDE.md / .github/instructions / copilot-instructions) are NOT fingerprints.
+5. Weights fixed: D1 design 25 / D2 traceability 30 / D3 readability 15 / D4 slop (reverse) 30.
+6. Anchors at 90/70/45/20; tiers come from the measurement→anchor tables; within a tier, base score + enumerated adjustments only.
+7. **Objective measurement first**: anything Glob/Grep/Bash can count must be counted and tabled. After measuring, check the counting lens (comments miscounted? a big file actually single-responsibility — settled by RM, never by line count; grep hits polluted by comments or log-string prose?) — wrong lens ⇒ re-measure.
+8. **Boundary records (no systematic rounding)**: when a measurement lands on a boundary or signals conflict, do NOT mechanically round to either side. Record a **boundary decision** — object, both-side reasoning, final choice, `file:line` evidence — and when the result straddles two adjacent tiers take their **midpoint** (rounded down). Claims without evidence count as "signal absent". **Exception: hard-gate judgments (G1/G3/G4) and RM mixing verdicts stay conservative** (ambiguous ⇒ mixed / larger R) — gates are a safety floor, not a score.
+9. Insufficient evidence ⇒ 70 baseline with declared low confidence; never inflate.
 
----
+## Scoring procedure (mandatory order)
 
-## 打分流程（强制顺序）
-
-| 步骤 | 动作 | 产物 |
+| Step | Action | Output |
 |---|---|---|
-| S1 | 解析参数；按 SKILL.md Step 2/3 清点并**固定采样范围**（两次评估必须同一采样深度） | 文件清单、采样声明 |
-| S2 | 跑「全局客观测量表」M1-M13，填测量单 | 可复现数值 |
-| S3 | 逐维度：测量单数值 → 查「测量值→锚点映射」→ 基础档+基础分 → 叠微调 | 四维原始分 |
-| S4 | 查「结构性硬闸门」G1/G3/G4，命中记封顶（多命中取最低） | 闸门清单 |
-| S5 | 加权 = 0.25×D1 + 0.30×D2 + 0.15×D3 + 0.30×D4；总分 = min(加权, 封顶)；九档取整 | 总分+档位 |
-| S6 | **60 分流校验（本 skill 的锚）** + 核心判据复核：先答「此项目在 60 线哪侧（≥60 及格=人类可维护 / <60 不及格=不适合人类）」，再答「愿不愿亲自维护」。总分与答案冲突以答案为准（<60 侧但总分 ≥60 → 强制下调） | 一致性确认 |
-| S7 | 校准核对：轮廓相似项目偏差 >3 分则回查 S2/S3 | 漂移检查 |
+| S1 | Parse args; inventory per SKILL.md Step 2/3; fix sampling scope (same depth across runs) | file list, sampling declaration |
+| S2 | Run the global measurement table M1-M13 | reproducible numbers |
+| S3 | Per dimension: measurements → tier table → base + adjustments | four raw scores |
+| S4 | Check hard gates G1/G3/G4 (multiple hits → lowest cap) | gate list |
+| S5 | Weighted = 0.25×D1 + 0.30×D2 + 0.15×D3 + 0.30×D4; total = min(weighted, cap); round to nine tiers | total + tier |
+| S6 | **60-split check (the anchor)** + core-question review: first answer "which side of 60 (≥60 pass = human-maintainable / <60 fail = unfit)", then "would you maintain it". Conflicts resolve to the answer (<60 side with total ≥60 ⇒ force below 60) | consistency confirmation |
+| S7 | Calibration: profile-similar projects deviating >3 ⇒ recheck S2/S3 | drift check |
 
 ---
 
-## 全局客观测量表（S2 必跑）
+## Global measurement table (mandatory in S2)
 
-测量先于任何打分。所有 `文件:行号` 证据在此阶段顺带记录。
+Measure before any scoring. Record `file:line` evidence along the way.
 
-| # | 测量项 | 获取方法 | 用途 |
+| # | Item | How | Used by |
 |---|---|---|---|
-| M1 | 源码文件数、总行数 | Glob 源码扩展名（排除依赖/构建产物目录）→ Bash `wc -l` | 分母 |
-| M2 | 文件行数分布（最大、>2000/1000/500 行数） | `wc -l | sort -rn | head`；awk 分层计数 | D2/G1（分布参考） |
-| M3 | 函数行数分布（最大、>500/200/60 行数） | awk 按函数边界粗测；对每个 >500 行函数记 `文件:行号`。60 行≈单页可复核（NASA/JPL），仅作心理参考 | D2/G1（RM 候选线：≥400 行） |
-| M4 | 空 catch/except 数 | Grep `except...pass`、`catch{}`（multiline） | D4 |
-| M5 | 复制粘贴组数（CP） | ≥6 行逐行相同（忽略空白/注释）跨函数/文件重复 ≥2 处 = 1 组（SIG Type-1 克隆） | D4 |
-| M6 | 注释密度 | 注释行/（代码+注释）×100% | D3 极端信号 |
-| M7 | 测试断言密度 | `assert|expect|Assert.` 计数 ÷ 测试文件数；另记占位断言 `assertTrue(true)` 数 | D1 |
-| M8 | AI 过程标记数（M） | **仅源码文件内**（排除顶层约定文件）显式 AI 编码轮次/工具产物：`Codex P\d|CodeRabbit|anchor.probe|@anchor|探针引用|agent 复盘|审查留痕|修复轮次|第X轮.*(修复|复盘|审查)|review round`。**裸"排查/修复"不计数**（正常工程用语） | D4/G3 |
-| M9 | 热路径调试残留 | 两步：① Grep 候选 `getenv|fprintf|console.log|debugger;|System.out.print|IsBadReadPtr|debug &&|print(`；② 排除产品意图输出（CLI stdout、结构化 logger、带文档的 getenv 配置）后**分两类计数**：**E_ai 真正 AI 排查残留**（坐标/偏移特定调试块 `if (debug && pos.x==...)`、魔法偏移内存校验 `IsBadReadPtr(base+0xNNN)`、排查叙事内嵌（文件头"第N轮 0xC0000005…"复盘）、探针残留）——**G4 用**；**E_debug 普通调试输出**（裸 `println!/eprintln!/console.log` 绕过日志系统，但可读、一行可修）——**D4 信号用，不触发 G4** | D4/G4 |
-| M10 | 垃圾桶名密度（G） | `\b(tmp|temp|foo|bar|xxx|thing|handle\d*|var\d*|data\d|result\d)\b` 次数 ÷ 源码行数×1000（排除注释/示例）。**`data/result/item/value/list/info/res` 不计数**（领域惯用名，只抽查命名-行为一致性） | D3 |
-| M11 | TODO/FIXME 数与质量 | Grep；抽查是否带缺陷单编号/触发条件（Google Java 规范）。空 TODO **≥5 处才计 1 信号** | D1/D4 |
-| M12 | 注释掉的代码块数（CD） | 注释块内含可执行语句（`;`、`if|for|return|=`）（SonarSource S125） | D4 |
-| M13 | 循环依赖 | import/require 图；核心模块环即记（S7091/S7027，JPA/多态误报需人工复核） | D2 |
+| M1 | Source file count, total LOC | Glob source extensions (exclude dependency/build dirs) → Bash `wc -l` | denominator |
+| M2 | File-size distribution (max; counts >2000/1000/500) | `wc -l \| sort -rn \| head`; awk buckets | D2/G1 (distribution reference) |
+| M3 | Function-size distribution (max; counts >500/200/60) | awk on function boundaries; record `file:line` for each >500. 60 lines ≈ one reviewable page (NASA/JPL), psychological reference only | D2/G1 (RM candidacy: ≥400) |
+| M4 | Empty catch/except | Grep `except...pass`, `catch{}` (multiline) | D4 |
+| M5 | Copy-paste groups (CP) | **Fixed procedure**: ① run `references/cp-detect.py` (6-line sliding-window exact-duplication detector; ignores blank lines, comment-only lines, indentation) for candidates; ② manually review and merge near-duplicates (same structure, only identifiers/literals differ) into groups; ③ if the script can't run, manually enumerate in the 10 largest files. **Group definition: all instances of one template = 1 group (instance count noted); different templates = different groups.** A group needs ≥6-line clones at ≥2 locations (SIG Type-1) | D4 |
+| M6 | Comment density | comment lines / (code+comment) ×100% | D3 extreme signal |
+| M7 | Test assertion density | `assert\|expect\|Assert.` count ÷ test files; also placeholder asserts `assertTrue(true)`. **A vacuous assert does NOT count as a placeholder when its test body contains a compile-time check (e.g. `let _: any P.Type = T.self`) or another real assertion** | D1 |
+| M8 | AI process markers | **Source files only** (exclude top-level convention files): explicit AI coding-round/tool artifacts — `Codex P\d\|CodeRabbit\|anchor.probe\|@anchor\|探针引用\|agent 复盘\|审查留痕\|修复轮次\|第X轮.*(修复\|复盘\|审查)\|review round`. (CJK pattern strings are detection targets — keep verbatim.) Bare "排查/修复/fix" does NOT count (normal engineering vocabulary) | D4/G3 |
+| M9 | Debug residue in hot paths | Two steps: ① grep candidates `getenv\|fprintf\|console.log\|debugger;\|System.out.print\|IsBadReadPtr\|debug &&\|print(`; ② after excluding product-intent output (CLI stdout, structured logger, documented env config), count two classes: **E_ai — true AI debugging residue** (coordinate/offset-specific debug blocks `if (debug && pos.x==...)`, magic-offset memory checks `IsBadReadPtr(base+0xNNN)`, embedded debugging narratives such as a file-header "round N 0xC0000005…" retrospective, probe residue) — feeds G4; **E_debug — ordinary debug output** (bare println/eprintln/console.log bypassing the logger but readable and one-line-fixable) — D4 signal only, never G4 | D4/G4 |
+| M10 | Junk-name density | `\b(tmp\|temp\|foo\|bar\|xxx\|thing\|handle\d*\|var\d*\|data\d\|result\d)\b` occurrences ÷ source lines ×1000 (exclude comments/examples). **`data/result/item/value/list/info/res` not counted** (domain idioms; spot-check name-behavior consistency instead). Also exclude method calls (e.g. `.handle(error)`) and prose inside log strings | D3 |
+| M11 | TODO/FIXME count & quality | Grep; spot-check for issue IDs / trigger conditions (Google Java style). Empty TODOs: ≥5 = 1 signal | D1/D4 |
+| M12 | Commented-out code blocks | Comment blocks containing executable statements (`;`, `if\|for\|return\|=`). **Doc comments and explanatory prose that merely mention code keywords do NOT count** (SonarSource S125) | D4 |
+| M13 | Circular dependencies | import/require graph; core-module cycles count (S7091/S7027; manually review JPA/polymorphism false positives) | D2 |
 
-> **RM 候选线**：函数 ≥400 行 / 文件 ≥1800 行。M2/M3 的 2000/1000/500/60 等仅作分布参考，不作扣分线。
-> 测量纪律：两次评估用同一套命令与同一采样范围；数值先于印象记录；测量单随报告附上。
+> **RM candidacy**: functions ≥400 lines / files ≥1800 lines. The other M2/M3 buckets are distribution reference only, not penalty lines.
+> Measurement discipline: same commands and same sampling across runs; numbers recorded before impressions; the sheet ships with the report.
 
 ---
 
-## 结构性硬闸门（总分硬性封顶）
+## Structural hard gates (total caps)
 
-任一事实成立即封顶；多命中取最低封顶；每条命中带 `文件:行号` 证据。
+Any established fact caps the total; multiple hits → lowest cap; each hit carries `file:line` evidence.
 
-| 闸门 | 判定条件 | 封顶 |
+| Gate | Condition | Cap |
 |---|---|---|
-| G1 核心 god-function / god-file | 核心业务集中在单个超大函数/超大文件**且职责混杂、难以追踪**。候选资格：函数 ≥400 行 / 文件 ≥1800 行即进 RM 候选（行数只定资格、不判混杂）；混杂与否一律由 RM 协议裁决，不得用行数替代 | 60 |
-| G3 源码内联 AI 过程标记成规模 | 源码文件内 AI 编码过程标记 ≥5 处（M8 收窄清单），散布核心/热路径且显著妨碍阅读 | 45 |
-| G4 AI 排查残留混入热路径 | 热路径 **AI 排查残留**（E_ai：坐标/偏移特定调试块、魔法偏移内存校验、排查叙事内嵌、探针残留）≥5 处（M9 净数）。**普通调试输出（裸 println!/eprintln!/console.log，即使绕过日志系统，只要可读、一行可修）不触发 G4**，只按 D4 的 E_debug 信号计分 | 45 |
+| G1 core god-function/god-file | Core business concentrated in a single oversized function/file **AND responsibility-mixed, hard to trace**. Candidacy by size (func ≥400 lines / file ≥1800 lines); mixing is decided ONLY by the RM protocol, never by line count | 60 |
+| G3 inlined AI process markers at scale | ≥5 M8 markers in source files, spread across core/hot paths, visibly obstructing reading | 45 |
+| G4 AI debugging residue in hot paths | ≥5 E_ai items (M9 net count). **Ordinary debug output (E_debug — bare println/eprintln/console.log, readable, one-line-fixable) never triggers G4**, only the D4 signal | 45 |
 
-**组合规则**：G1 与 G3/G4 任一**同时**命中 → 封顶 **40**（结构性 god + AI 过程指纹并存 = 结构性灾难）。
+**Combination rule**: G1 plus any of G3/G4 → cap **40** (structural god + AI fingerprints = structural disaster).
 
-**G1 三步判定**：① 找最大单元（M2/M3）；② 对每个 ≥400 行函数 / ≥1800 行文件执行 RM 协议，列出全部职责域；③ RM 判"混杂"→命中；判"单一职责"→不触发（保护 HMCL/grok-build 式"大但组织清晰"）。可用上帝类静态指标佐证（WMC≥47 / ATFD>5 / TCC<1/3，Lanza & Marinescu / PMD GodClass），仅佐证不作唯一依据。
+**G1 three steps**: ① find the largest units (M2/M3); ② run RM on every ≥400-line function / ≥1800-line file; ③ RM "mixed" ⇒ hit; "single responsibility" ⇒ no gate (protects HMCL/grok-build-style "big but well-organized"). God-class statics (WMC≥47 / ATFD>5 / TCC<1/3, Lanza & Marinescu / PMD GodClass) may corroborate, never decide alone.
 
-**边界说明**：闸门只判结构，与体量、人数、AI 来源无关；AGENTS.md/CLAUDE.md 等顶层约定文件不算 AI 过程标记；项目本身是 AI 工具时其 prompt/agent 代码是产品，不触发 G3；"核心/热路径"= 入口→主要业务→落地；RM 结果含糊取"混杂"（保守）；**封顶是上限非目标**（总分 = min(加权分, 封顶)），pre-cap 加权低于封顶时按加权计。
+**Boundaries**: gates judge structure only — never size, headcount, or AI authorship; AGENTS.md/CLAUDE.md-style top-level convention files are not AI markers; when the project itself IS an AI tool, its prompt/agent code is product (no G3); "core/hot path" = entry → main business → persistence; ambiguous RM ⇒ mixed (conservative per rule 8's gate exception); **caps are ceilings not targets** (total = min(weighted, cap); when the pre-cap weighted score is lower, the weighted score stands).
 
-**判据对照**：答案"不愿意"总分还应 ≤60、"完全不可能"≤40；与封顶矛盾取更严。
-
----
-
-## 职责混杂判定协议（RM 协议）——G1 与维度 2 共用判据
-
-「大但职责单一不扣 / 大且混杂重罚」的唯一执行判据，也是区分 HMCL/grok-build（大而清晰）与 PCL/N.E.K.O（大且混杂）的仲裁器。**不得用行数替代本协议。**
-
-**步骤（对每个候选 ≥400 行函数 / ≥1800 行文件）**：
-1. **列功能块**：列出内部所有功能块（子函数、代码段、类成员），各起一句功能描述。
-2. **归域**：每个功能块归入职责域。标准域：`配置解析`/`状态管理`/`UI渲染`/`业务逻辑`/`I/O序列化`/`网络`/`平台系统调用`/`数据结构定义`/`测试桩`/`错误处理`。可自定义但须明确列举。
-   - **域关联规则**：`配置解析`/`I/O序列化`/`网络`/`平台系统调用`/`错误处理` 是**支撑域**。当支撑域与业务域处于**同一条数据流**（请求-响应/生产-消费/输入-处理-输出）上、为链上相邻步骤提供支撑时，**不独立计数**；只有当多个域**并行共存、彼此无同一数据流关系**时（登录与下载与主题被塞进同一文件但互不衔接），才各算一域。归域时须为每个互不相关的域对写出"非相关理由"；"同一数据流"豁免必须能用一句话说清流的边界，说不出边界的流不算豁免。
-3. **计数**：R_func = 单一函数触及的职责域数（支撑域折算后）；R_file = 文件内具实质逻辑（≥30 行）的独立子域数。
-4. **判定**：R_func ≥3 或 R_file ≥3（各子域有实质逻辑）→ **混杂**；全部功能块属同一职责域或同一条数据流 → **单一职责**，无论行数。
-5. **留证**：记录每个子域 `文件:行号` 与归域理由（含非相关理由、数据流边界）。
-
-**平局规则**：R=2（贴边）→ 不判混杂，记"边缘"，由维度 2 微调承接（-1~-2）；R 值含糊取较大值（保守）；候选内一律执行，不允许跳过。
-
-**最终仲裁器（不可覆盖）**：RM 结果与「换一个普通人类维护者能否不靠外置文档读完并安全改动」冲突时，**以判据答案为准并回改归域**。RM 判单一职责但人类实际需外置文档才记得住 → 归域过松，改判混杂；反之 RM 判混杂但人类能直接读完安全改动 → 支撑域被误拆，回改重计。
-
-**强制先例（归域冲突视为错误）**：
-- **HMCL 2881 行设置页面 → 单一职责**：配置读入→表单渲染→编辑→保存回写，是同一 UI 数据流的连续步骤 → R=1，不触发 G1。
-- **grok-build 4376 行 dispatch → 单一职责**：输入→分发→输出单条数据流，网络/IO 与业务逐个衔接 → R=1。
-- **PCL god-file → 混杂**：登录鉴权、主题配置、页面渲染、下载管理、版本更新、网络、错误弹窗并行共存、彼此无同一数据流 → R≥3，触发 G1。
-- **N.E.K.O god-file → 混杂**：配置+状态+UI+业务+IO 并行堆叠，无单一数据流串联 → R≥3。
+**Judgment cross-check**: "won't maintain" ⇒ ≤60, "impossible" ⇒ ≤40; on conflict the stricter wins.
 
 ---
 
-## 维度 1：设计合理性与技术诚实性（权重 25）
+## Responsibility-Mixing protocol (RM) — shared arbiter for G1 and D2
 
-**定义**：设计是否真的合理、承诺是否真的成立——技术思维（测量/取舍/真实现）vs 许愿（声称/占位/装饰）。
+The sole execution judge of "big but single-responsibility (no penalty) vs big and mixed (heavy penalty)" — the arbiter separating HMCL/grok-build (big, clear) from PCL/N.E.K.O (big, mixed). **Line counts never substitute for this protocol.**
 
-**锚点**：90=架构匹配复杂度、核心承诺全验证成立、决策有技术理由、有真实测试（即使偏薄）；70=大体成立、个别装饰抽象或承诺略夸张；45=架构与问题不匹配、多个承诺无法兑现（尤其"性能优化"实际更慢）、决策像许愿；20=设计荒谬、承诺全面落空。
+**Steps (per candidate: function ≥400 lines / file ≥1800 lines)**:
+1. **List functional blocks**: every inner block (sub-function, code section, class member) with a one-line description.
+2. **Assign domains**: standard set — `config parsing` / `state management` / `UI rendering` / `business logic` / `I/O & serialization` / `network` / `platform syscalls` / `data structure defs` / `test stubs` / `error handling`. Custom domains allowed if explicitly enumerated.
+   - **Domain-association rule**: `config parsing` / `I/O & serialization` / `network` / `platform syscalls` / `error handling` are **support domains**. A support domain on the **same dataflow** as the business domain (request-response / producer-consumer / input-process-output), serving a chained adjacent step, does **not** count separately. Domains count separately only when they **coexist in parallel without a shared dataflow** (login + downloads + theming stuffed into one file, mutually unconnected). Record a "non-related reason" for every unrelated domain pair; a same-dataflow exemption must be statable in one sentence with a clear flow boundary — otherwise no exemption.
+3. **Count**: R_func = domains touched by one function (after support-domain folding); R_file = independent sub-domains with substantial logic (≥30 lines).
+4. **Verdict**: R_func ≥3 or R_file ≥3 (each with substantial logic) ⇒ **mixed**; all blocks in one domain or one dataflow ⇒ **single responsibility**, regardless of size.
+5. **Evidence**: record each sub-domain's `file:line` and assignment rationale (including non-related reasons and dataflow boundaries).
 
-**测量步骤**：
-1. **承诺-实现核对（核心）**：列全部承诺，计 `P_fail`（验证不成立或反向成立的重大承诺，如"性能提升"却加开销；每处带 声称处+代码处 双 `文件:行号`）、`P_placeholder`（占位/TODO/抛错兜底）、验证率 P/C。
-2. **装饰性抽象计数（D）**：Grep `interface|abstract class|Factory|Provider|Strategy|Protocol|Abstract[A-Z]`，逐条判"全项目仅一个实现、无扩展预期" → D+1。
-3. **测试安全感**：取 M7。`T_placeholder`（占位/空测试）、`T_ignore`（@Ignore/skip）、`T_assert/T_file`（每测试文件平均断言）。
-4. **构建/CI**：尝试构建或读 CI 配置，确认"每次提交自动构建+测试+结果可见"。
-5. **性能承诺反查**：声称优化的，查缓存/批处理/索引是否真降开销还是加开销。
+**Ties**: R=2 (borderline) ⇒ not mixed; record "borderline", D2 adjusts −1~−2. Ambiguous R ⇒ larger value (conservative, per rule 8's gate exception). No skipping candidates.
 
-**测量值→锚点映射**：
+**Final arbiter (non-overridable)**: if the RM result conflicts with "could an ordinary human maintainer read this and change it safely WITHOUT external docs", the human answer wins and the domain assignment must be redone: RM says single but humans need external docs to remember it ⇒ assignment too loose, re-judge as mixed; RM says mixed but humans can read and change it directly ⇒ support domains were over-split, recount.
 
-| 判定式 | 档 | 基础分 |
+**Binding precedents** (a conflicting assignment is an error — reassign per precedent):
+- **HMCL 2,881-line settings page → single responsibility**: config load → form render → edit → save-back — consecutive steps of one UI dataflow → R=1, no G1.
+- **grok-build 4,376-line dispatch → single responsibility**: input → dispatch → output, one dataflow, network/IO chained step by step → R=1.
+- **PCL god-file → mixed**: login auth, theme config, page rendering, download management, version update, network, error popups coexist in parallel with no shared dataflow → R≥3, G1 hit.
+- **N.E.K.O god-file → mixed**: config + state + UI + business + IO stacked in parallel, no single dataflow → R≥3.
+
+---
+
+## D1: design soundness & technical honesty (weight 25)
+
+**Definition**: is the design actually reasonable and do promises actually hold — engineering thinking (measurement/trade-offs/real implementations) vs wishful thinking (claims/placeholders/decoration).
+
+**Anchors**: 90 = architecture matches complexity, core promises all verified, decisions have technical reasons, real tests (even if thin); 70 = mostly holds, a few decorative abstractions or slightly exaggerated promises; 45 = architecture mismatched to the problem, multiple promises unfulfillable (especially "performance optimizations" that are actually slower), decisions feel like wishes; 20 = absurd design, promises comprehensively fail.
+
+**Measurement**:
+1. **Promise verification (core)**: list every promise; count `P_fail` (major promises verified false or inverted — e.g. "performance gain" that adds overhead; each with claim-site + code-site `file:line` pairs), `P_placeholder` (placeholder/TODO/throwing stub), verification rate P/C.
+2. **Decorative abstractions (D)**: grep `interface|abstract class|Factory|Provider|Strategy|Protocol|Abstract[A-Z]`; judge each — "single implementation project-wide, no extension expectation" ⇒ D+1. **Exemptions (any one suffices ⇒ do NOT count): a test double/mock exists; ≥2 call sites use it polymorphically (`any P` / generic constraints); it guards a documented cross-layer boundary.**
+3. **Test safety**: from M7 — `T_placeholder` (per M7's definition), `T_ignore` (@Ignore/skip), `T_assert/T_file`.
+4. **Build/CI**: try building or read the CI config — "every commit auto-builds + tests with visible results"?
+5. **Performance-promise recheck**: for claimed optimizations, check whether caches/batching/indexes really cut cost or add it.
+
+**Measurement → tier**:
+
+| Condition | Tier | Base |
 |---|---|---|
-| P_fail=0 且 D≤1 且 T_placeholder≤2 且 有真实断言 | 90 | 90 |
-| P_fail=0 且 (D=2~3 或 T_placeholder=3~5 或 T_assert/T_file<1) | 70-85 | 85 |
-| P_fail=0 且 D=4 | 70-85 | 80 |
-| P_fail=1（轻微）且 D≤3 | 70-80 | 78 |
-| P_fail=1 且 D=4 | 70-80 | 72 |
-| P_fail≥2 或 一处性能承诺实际加开销 或 D≥5 或 测试全占位 | 45 | 55 |
-| P_fail≥4 或 承诺全面落空 或 设计荒谬 | 20 | 30 |
+| P_fail=0 AND D≤1 AND T_placeholder≤2 AND real assertions exist | 90 | 90 |
+| P_fail=0 AND (D=2~3 OR T_placeholder=3~5 OR T_assert/T_file<1) | 70-85 | 85 |
+| P_fail=0 AND D=4 | 70-85 | 80 |
+| P_fail=1 (minor) AND D≤3 | 70-80 | 78 |
+| P_fail=1 AND D=4 | 70-80 | 72 |
+| P_fail≥2 OR one performance promise actually adds overhead OR D≥5 OR tests all placeholder | 45 | 55 |
+| P_fail≥4 OR promises comprehensively fail OR absurd design | 20 | 30 |
 
-**微调**（上限 95 下限 20）：P_fail=0 且 P_placeholder=0（全承诺带证据）→+2；T_assert/T_file≥3 且核心有对应测试 →+2；构建可跑或 CI 常态 →+1；T_placeholder≥3 →-3；测试全占位 →-5；构建无法运行且无 CI →-3；D≥4 →-3。
+**Adjustments** (cap 95, floor 20): P_fail=0 AND P_placeholder=0 (all promises evidenced) → +2; T_assert/T_file≥3 with core coverage → +2; build works or CI routine → +1; T_placeholder≥3 → −3; tests all placeholder → −5; not buildable and no CI → −3; D≥4 → −3.
 
-**平局规则**：P_fail 在 1~2 间按重大记取较低档；档位间直接取表内数值不造中间值；微调正负按代数和；"是否重大"有争议取重大（除非反证带证据）；性能优化无法断定真降开销 → 按"未能验证"取较低档（承诺方负举证责任）；测试强但设计荒谬 → 设计荒谬优先取较低档，回维度 4 查许愿；**结构否决（反膨胀）**：若 G1 命中（结构性 god）或 D2 进红区，D1 原始分 ≤70——承诺全兑现也不给 80+。
+**Tie-breaks**: P_fail between 1~2 ⇒ count as major (lower tier); pick table values, never invent intermediates; disputed "major" ⇒ major unless rebutted with evidence; undecidable performance claims ⇒ "unverified", lower tier (claimant bears the burden of proof); strong tests + absurd design ⇒ absurdity wins (lower tier), and recheck D4 for wishful thinking; **structure veto (anti-inflation): if G1 hits (structural god) or D2 lands in the red zone, D1 ≤70** — full promise-keeping earns no 80+.
 
 ---
 
-## 维度 2：可追踪性与心智负担（权重 30）
+## D2: traceability & mental load (weight 30)
 
-**定义**：人类维护者能否追踪请求→代码、安全地改动。人类没有 AI 的上下文记忆（工作记忆约 4±1 组块，Miller 1956 / Cowan 2001），职责混杂、逻辑庞杂的项目人类记不住、只能靠外置文档维护。**文件大小本身中性**：大但职责单一（RM 协议）、逻辑清晰、注释完善不扣；庞杂才扣。
+**Definition**: can a human maintainer trace request→code and change code safely? Human working memory is ~4±1 chunks (Miller 1956 / Cowan 2001) — mixed, bloated logic can't be held in a human head and forces reliance on external docs. **File size itself is neutral**: big but RM-single-responsibility, clear, well-commented ⇒ no penalty; bloat is penalized.
 
-**锚点**：90=请求→代码可追踪、改动处只看 1-2 处、逻辑边界与文件边界一致，允许较大文件/较长函数（RM 判单一职责）；70=基本可追踪、偶有跨文件跳转；45=**逻辑庞杂**（一个文件/函数管一堆职能、无清晰架构、追踪被打断、改动牵动多处、**需靠外置文档才能记住结构**）；20=完全无法追踪、人类根本不愿意碰。
+**Anchors**: 90 = request→code traceable, changes touch 1-2 places, logic boundaries match file boundaries (large files/functions allowed when RM-single); 70 = mostly traceable, occasional cross-file hops; 45 = **bloated logic** (one file/function runs many jobs, no clear architecture, tracing interrupted, changes ripple, **needs external docs to remember structure**); 20 = completely untraceable, humans refuse to touch it.
 
-**测量步骤**：M2 文件分布；M3 函数分布；**RM 协议结果**（对全部 ≥1800 行文件/≥400 行函数执行，得 `N_mixed`）；**T_trace**（核心功能入口→落地跨几个文件、被几层打断）；**T_impact**（改公共函数需同步改几处；全局状态/拷贝传参耦合，Ousterhout 信息泄漏）；M13 循环依赖；**ND_max** 最大嵌套深度（Linux：>3 重构；S134/ESLint：默认 4；>5 红区）；参数 >7 函数数（SIG≤4 目标、>7 注意）；有工具时补圈复杂度>10 单元数 / 认知复杂度>15 单元数（McCabe/Sonar，仅作拆分红旗，须与 RM 结合）；**ext_doc** 核心数据流离开文档能否从代码还原。
+**Measurement (fixed counting lenses — follow them exactly)**:
+- M2 file distribution; M3 function distribution; **RM results** (`N_mixed` = mixed candidates).
+- **T_trace**: pick the 3 main user journeys identifiable from the README/entry point; for each, count hops from the event entry (UI action / CLI command) to data landing (disk / network / subprocess) — entering a new file = 1 hop, same-file jumps don't count; take the maximum across the 3 journeys. *Worked example*: modpack install sheet → sheet view model → install coordinator → download service → disk = 4 hops ⇒ yellow.
+- **T_impact**: ① find the 3 most-called **business** public functions — **excluding infrastructure fan-out** (logging, error handling, path/constant registries) — and count their call sites, taking the max; ② estimate how many files one typical feature change must synchronously touch; T_impact = the larger of ①②.
+- M13 circular dependencies.
+- **ND_max** max nesting depth — *lens*: count only control-flow keywords (`if/guard/for/while/switch/catch`); a closure body counts as a fresh function boundary (restart from 0); declarative UI-builder nesting (SwiftUI ViewBuilder and similar) and chained modifiers NEVER count (Linux: >3 refactor; SonarSource S134/ESLint default 4; >5 red zone).
+- **Long parameter lists** — *lens*: only `func`/method signatures; constructors/initializers and declarative view builders excluded; count only **required parameters (no default value)**; commas inside closure/tuple types don't count (SIG ≤4 target, >7 watch).
+- With tooling: cyclomatic >10 / cognitive >15 unit counts (McCabe/Sonar — red flags for splitting only, combine with RM).
+- **ext_doc**: can the core dataflow be reconstructed from code alone, without external docs?
 
-**测量值→锚点映射**（大但单一职责永远不进黄/红）：
+**Measurement → tier** (big-but-single never enters yellow/red):
 
-| 信号 | 绿区 | 黄区 | 红区 |
+| Signal | Green | Yellow | Red |
 |---|---|---|---|
-| N_mixed（核心） | 0 | — | ≥1（→G1） |
-| T_trace 跨文件数 | ≤2 | 3-5 | ≥6 |
-| T_impact 改动影响面 | ≤2 | 3-5 | ≥6 |
-| ND_max 嵌套深度 | ≤3 | 4-5 | ≥6 |
-| 参数>7 函数数 | 0 | ≤2 | ≥3 |
-| 循环依赖（核心） | 无 | 非核心 | 核心存在（先人工复核） |
-| ext_doc 需外置文档 | 否 | 部分模块 | 核心无法从代码还原且跨 ≥3 文件 |
+| N_mixed (core) | 0 | — | ≥1 (→G1) |
+| T_trace hops | ≤2 | 3-5 | ≥6 |
+| T_impact change surface | ≤2 | 3-5 | ≥6 |
+| ND_max nesting | ≤3 | 4-5 | ≥6 |
+| Functions with >7 required params | 0 | ≤2 | ≥3 |
+| Circular deps (core) | none | non-core | present in core (manual review first) |
+| ext_doc needed | no | some modules | core unreconstructable from code, spans ≥3 files |
 
-**档位计数**：全绿 90；黄 1 项 88；黄 2 项 85；黄 3 项 82；黄 4 项 75；黄 ≥5 项进红区考察（按红 1 项 45）；红 1 项 45（若为 N_mixed 即 G1，D2 记 45，总分另被 G1 封顶 60）；红 2 项 40；红 ≥3 项 30。
+**Tier counting**: all green ⇒ 90; **each yellow −2.5, rounded half up (1 yellow=88, 2=85, 3=83, 4=80)**; ≥5 yellows ⇒ examine as red zone (score as 1 red); 1 red ⇒ 45 (if the red is N_mixed ⇒ G1: D2=45 and the total is separately capped at 60); 2 reds ⇒ 40; ≥3 reds ⇒ 30.
 
-**认知负担复合信号**：ND_max 落黄（4-5）**且**同函数多分支（分支 ≥6 或圈复杂度 ≥10）→ 该函数记 1 项红（档降一级）；仅深嵌套或仅多分支单方面成立 → 保持黄区，档内 -2；既深嵌套又职责混杂 → 直接 45。
+**Cognitive-load compound**: ND_max yellow (4-5) AND the same function branch-heavy (branches ≥6 or cyclomatic ≥10) ⇒ that function counts as 1 red (tier drops one level); only one of the two ⇒ stays yellow, −2 within tier; deep nesting AND mixed responsibilities ⇒ straight to 45.
 
-**微调**（90 档内，上限 95；其余档只允许 -1~-2）：T_trace≤1 →+1；T_impact≤1 →+1；无全局状态 →+1；核心难处注释讲"为什么" →+1；RM 结果"边缘"（R=2）→-2。
+**Adjustments** (any tier, total adjustment within ±2; cap 95, floor 20): T_trace≤1 → +1; T_impact≤1 → +1; no global state → +1; core hard spots carry why-comments → +1; RM "borderline" (R=2) → −2.
 
-**平局规则**：大文件/长函数一律先跑 RM 再谈档位（单一职责不进黄/红，即使 3000 行）；"大而清晰 vs 大且混杂"分歧以"普通人类能否不靠外置文档读完并安全改动"为准；T_trace/T_impact 在 5~6 边界取 6（较低档）；ND_max=5 与"注释清晰"冲突按 ND_max 计红，注释只允许 -1 微调；循环依赖有误报嫌疑先人工复核；档位内取表内数值；读不完核心路径取 70 声明低置信。
-
----
-
-## 维度 3：人类可读性与自我解释性（权重 15）
-
-**定义**：代码本身能不能让人读懂，注释/文档是帮人还是碍人。注释只看"承载的信息是否代码不可推导、是否腐坏"，**数量、密度、规范一律不加分**（Ousterhout 与 Clean Code 立场相反，本维度不站队，只评是否妨碍理解）。
-
-**锚点**：90=命名直接传达意图、代码自我解释、注释讲"为什么"；70=大体可读、部分需查上下文；45=命名无语义（垃圾桶名泛滥，或经命名-行为一致性抽查证实无语义）、注释复述操作或写给 AI/清单看；20=几乎无法读懂、只能靠 AI。
-
-**测量步骤**：
-1. **垃圾桶名密度（M10）**。
-2. **注释意图分类（核心）**：采样 N = min(20, 注释总数) 条，逐条归四类：`I` 意图/为什么、`R` 复述（无新增信息）、`S` 装饰/清单（框线头/作者日期头）、`H` 幻觉（引用不存在符号，Radmanesh 2024）。记 R/S/H 计数。
-3. **命名-行为一致性**：抽查函数名对照函数体。
-4. **公共 API 契约文档覆盖**：抽查 10 个公共函数，是否有契约性 docstring（做什么/前置/副作用/异常，Effective Java Item 56）；**缺文档致调用方被迫读实现才扣分**。
-5. **TODO 质量（M11）**、**行宽**（>120 物理列计数，CJK 按逻辑行长）。
-
-**测量值→锚点映射**：
-
-| 判定式 | 档 | 基础分 |
-|---|---|---|
-| G<5 且 R≤3 且 S≤3 且 H=0 且 I≥5（注释总数 <10 时改"核心难处均有 why 注释且 R/H=0"） | 90 | 90 |
-| G=5~15 或 R=4~8 或 H≤1 | 70-85 | 85 |
-| G≥15 或 R≥9 或 H≥3 或 清单式 docstring 成规模（≥5 条复述签名）或 S≥8 或 公共 API 缺契约文档致被迫读实现（抽查 ≥3 处） | 45 | 55 |
-| R 占绝对多数且 H≥5 或 命名误导 或 只能靠 AI 读懂 | 20 | 30 |
-
-**微调**（上限 95 下限 20）：G<3 且命名全表意 →+1；核心难处都有 why 注释 →+1；复述注释为 0 →+1；注释密度 <5% 且复杂度高 →-2；注释密度 >40% 且多为短注释（AI 模板腔）→-2；中文项目注释加倍核对一致性 → 记入 H 判定。
-
-**平局规则**：注释少不扣、多不加（密度只作极端信号）；R 在 8~9 边界取 9；注释总数 <20 时采样 N=总数、<10 时 90 档按"核心难处有 why 且 R/H=0"；H=1~2 与"个别笔误"含糊取成立；命名与注释冲突以命名无语义为主判（更低档），注释只 ±2；单处腐坏注释不降档、≥3 处才降档；某文件无注释但命名优秀 → 不扣分。
+**Tie-breaks**: big files/long functions always go through RM before any tiering (single-responsibility never yellow/red, even at 3,000 lines); "big-but-clear vs big-and-mixed" disputes settle by the human arbiter (read & safely change without external docs); boundary values follow rule 8 (record + midpoint where tiers straddle); suspected false-positive cycles ⇒ manual review first; pick table values within a tier; core path unreadable ⇒ 70 with declared low confidence.
 
 ---
 
-## 维度 4：AI 屎山与许愿痕迹（权重 30，**反向计分**）
+## D3: human readability & self-explanation (weight 15)
 
-**定义**：项目里**妨碍人类维护的 AI 产物**有多少——不是"AI 写的代码"本身；AI 生成/辅助/工具链存在一律不扣分，只扣人类难以接受的**产物**（结构性 god、热路径调试残留、承诺背离、系统性复制粘贴、源码内联 AI 过程标记、幻觉注释）。原始分高=屎山少。
+**Definition**: can the code itself be understood, and do comments/docs help or hinder? Comments are judged only by "does the information go beyond what the code shows, and is it stale" — **count, density, and compliance earn nothing** (Ousterhout and Clean Code disagree; this dimension takes no side, only "does it obstruct understanding").
 
-**测量（全部取自测量表 + 维度 1/3 副产物，无新测量）**：
+**Anchors**: 90 = names convey intent directly, code self-explains, comments explain "why"; 70 = mostly readable, some spots need context lookup; 45 = names carry no semantics (junk names rampant, or proven meaningless by name-behavior spot-checks), comments restate operations or address AI/checklists; 20 = nearly unreadable, AI-dependent.
 
-| 信号 | 定义/来源 | 阈值口径 |
+**Measurement**:
+1. **Junk-name density (M10)** — with its exclusion rules.
+2. **Comment intent classification (core)** — **fixed sampling frame**: all body comments of the 5 largest source files + the first 2 body comments of 10 files picked at even intervals in filename order (N≤30). **File headers / license headers are excluded from the sample entirely and never count as S.** Repeated runs must use the same frame.
+   **Classification decision tree** (apply per comment, in order):
+   ① references nonexistent symbols or contradicts the code → **H** (hallucinated);
+   ② adds information the code cannot show — rationale, external constraints, domain knowledge, trade-offs, magic-value meaning, threading/performance reasons → **I** (intent);
+   ③ merely translates the declaration into prose — the name already says it (`/// The x`, `- Parameter x: The x`, `/// Whether the toggle is visible`) → **R** (restatement). **Contract docstrings that add constraints, side-effects, exceptions, or override semantics are I, not R**;
+   ④ rule boxes / separators / decorative banners in the body → **S** (decorative).
+   **Labeled examples** (from real disputes — calibrate against these):
+   - `/// The Microsoft OAuth authorization endpoint.` on `static let authorize` nested in `enum Authentication` → **R** (name + nesting already say it)
+   - `// CurseForge sort field: 6 = Last Updated` → **I** (magic value explained)
+   - `/// fallback for logging / debugging` → **I** (reason for existence)
+   - `- Parameter version: The version.` → **R** (signature translation)
+   - `// keep only value: callers don't need keys; dropping them saves memory` → **I** (why)
+   - `/// Checks which save types are available on disk, performing I/O off the main thread.` → **I** (threading rationale)
+   - `/// Whether the resource is currently disabled.` → **R**
+   - Copyright/license file-header block → **excluded from the sample**
+   Record per-comment classifications in the report's evidence appendix.
+3. **Name-behavior consistency**: spot-check function names against bodies.
+4. **Public API contract docs**: sample 10 public functions for contract docstrings (what / preconditions / side-effects / exceptions, Effective Java Item 56); penalize only when missing docs FORCE callers to read implementations.
+5. TODO quality (M11); line width (>120 physical columns; CJK by logical width).
+
+**Measurement → tier** (R-share = R ÷ sampled comments N):
+
+| Condition | Tier | Base |
 |---|---|---|
-| M AI 过程标记 | M8（排除顶层约定文件） | 核心内单独记；M≥3 → 45 |
-| E_ai AI 排查残留 | M9 的 E_ai（坐标/偏移特判、魔法偏移、排查叙事、探针残留） | ≥5 → G4 |
-| E_debug 普通调试输出 | M9 的 E_debug（裸 println 绕过日志系统但可读可修） | ≥8 处计 1 信号（人类正常债务级，不触发 G4） |
-| W 许愿背离 | 维度 1 的 P_fail | ≥2 重大 → 45 |
-| CP 复制粘贴组 | M5（SIG ≥6 行克隆） | **系统性**（≥3 组且需跨 ≥2 处同步改）→ 45 |
-| C 吞真实错误的空 catch | M4 结果**分类后计数**：best-effort 型（有注释说明尽力而为/缓存清理/离线兜底）→ 人类正常债务不重罚；**吞真实错误型**（无日志、无兜底、包裹关键业务逻辑）→ 才算 C | 真实型 ≥5 → 45 |
-| H 幻觉注释 | 维度 3 的 H | ≥3 → 45 |
-| CD 注释代码块 | M12 | ≥3 → 45 |
-| DZ 死代码/未使用导出 | 逐个导入/定义查引用 | 人类正常债务型，≥1 处计 1 信号 |
-| TODO 空/陈旧 | M11 | **≥5 处才计 1 信号** |
+| G<5 AND R-share <15% AND S≤3 AND H=0 AND I≥5 (fewer than 10 comments total ⇒ "core hard spots all have why-comments AND R/H=0") | 90 | 90 |
+| G=5~15 OR R-share 15%~40% OR H≤1 | 70-85 | 85 |
+| G≥15 OR R-share >40% OR H≥3 OR S≥8 (body comments) OR missing API contract docs force reading implementations (≥3 of sampled) | 45 | 55 |
+| R overwhelming majority AND H≥5, OR misleading names, OR readable only via AI | 20 | 30 |
 
-**信号计数口径**：每类别命中 ≥1 处计 1 信号（单类别多处仍计 1，但超额直接触发 45 档）；**人类正常债务型**= 非系统性 CP、best-effort 型空 catch、E_debug（普通调试输出）、DZ、TODO、个别大文件；**AI 过程指纹**= M、E_ai（AI 排查残留）、W、系统性 CP、G1 命中、H、吞真实错误的空 catch；分类模糊按 AI 过程指纹（保守）。
+**Adjustments** (cap 95, floor 20): G<3 with fully semantic names → +1; core hard spots all carry why-comments → +1; zero restatements → +1; comment density <5% with high complexity → −2; density >40% dominated by short comments (AI-template tone) → −2; CJK projects: double-check comment-code consistency → feeds the H count.
 
-**测量值→锚点映射**：
-
-| 判定式 | 档 | 基础分 |
-|---|---|---|
-| 总信号 ≤2 且全为人类正常债务型且无 AI 过程指纹 | 90 | 90 |
-| 总信号 3~4、分散、全为人类正常债务型且无 AI 过程指纹 | 70-85 | 88 - 信号数×2 |
-| 含 1 处孤立 AI 过程指纹（无其他信号） | 70-85 | 80 |
-| 任一命中：M≥3 / E_ai≥3 / W≥2 / 系统性 CP≥3 / C≥5 / H≥3 / CD≥3 / **G1 命中** / 1 处指纹+其他信号 / 总信号 ≥5 | 45 | 55 |
-| 泛滥：M 遍布核心 / E_ai≥5（→G4）/ CP 系统性 ≥6 组 / W≥4 / H≥5 | 20 | 30 |
-
-**微调**（上限 95 下限 20）：全部信号为 0 →+1；信号集中在同一文件（2 类）→-3；注释全为 AI 模板腔 →-3；一处重大许愿直接 45 档不叠加。
-
-**平局规则**：人类正常债务进黄区、AI 过程指纹进红区，模糊按指纹（保守）；同文件 2 类以上信号记"污染集中"重扣；CP 在 2~3 边界取 3 但未达"需同步"限定按人类正常债务只进 70-85；一处重大许愿+一处其他信号 → 直接 45；**触发 G1/G3/G4 时 D4 原始分记 ≤55**，总分由闸门封顶（G1→60、G3→45、G4→45；G1+G3/G4→40）；同一文件连续 ≥3 类信号 → 档位再降一档；**AI 来源不可考证时一律不计分不扣分**（只认可验证的产物证据）；信号定义统一按本文件与 `ai-slop-signals.md`，不允许个人口径。
+**Tie-breaks**: sparse comments never penalized, abundant comments never rewarded (density is an extreme signal only); a single stale comment doesn't drop the tier — ≥3 do; name-vs-comment conflicts ⇒ names rule (lower tier), comments adjust ±2 only; a comment-free file with excellent names ⇒ no penalty; H=1~2 ambiguous with "individual typo" ⇒ counts as H.
 
 ---
 
-## 校准核对（S7 漂移检查，非评分判据）
+## D4: AI slop & wishful-thinking residue (weight 30, reverse scoring)
 
-评估对象轮廓与下表某行相似时，分数应落参考区间。偏差 >3 分 → 回查 S2/S3，**不允许直接改分凑数**。若多项目系统性偏离 → 细则需回炉（由维护者处理）。
+**Definition**: how much **AI-produced residue that obstructs human maintenance** the project contains — NOT "AI-written code" itself. AI generation/assistance/toolchains are never penalized; only artifacts humans can't accept (structural gods, hot-path debug residue, promise betrayal, systemic copy-paste, inlined AI process markers, hallucinated comments). Higher raw score = less slop.
 
-| 参考轮廓 | 参考区间 |
+**Signals (all from the measurement table + D1/D3 by-products; no new measurement)**:
+
+| Signal | Definition / source | Threshold |
+|---|---|---|
+| M AI process markers | M8 (excluding top-level convention files) | counted separately in core; M≥3 → 45 |
+| E_ai AI debugging residue | M9's E_ai (coordinate/offset special-cases, magic offsets, narratives, probes) | ≥5 → G4 |
+| E_debug ordinary debug output | M9's E_debug (bare prints bypassing the logger, readable, fixable) | ≥8 = 1 signal (human-normal debt; never G4) |
+| W wishful betrayal | D1's P_fail | ≥2 major → 45 |
+| CP copy-paste groups | M5 (SIG ≥6-line clones; fixed procedure + group definition) | **systemic** (≥3 groups AND each change syncs ≥2 call sites) → 45 |
+| C error-swallowing empty catches | M4 classified: best-effort (commented as such / cache cleanup / offline fallback) = human-normal debt, no heavy penalty; **error-swallowing** (no log, no fallback, wraps key business logic) = C | ≥5 swallowing → 45 |
+| H hallucinated comments | D3's H | ≥3 → 45 |
+| CD commented-out code blocks | M12 | ≥3 → 45 |
+| DZ dead code / unused exports | per-symbol reference checks | human-normal debt; ≥1 = 1 signal |
+| TODO empty/stale | M11 | ≥5 = 1 signal |
+
+**Counting**: each category with ≥1 hit = 1 signal (multiple hits in one category still 1 signal, but over-threshold hits trigger the 45 tier directly). **Human-normal debt** = non-systemic CP, best-effort catches, E_debug, DZ, TODOs, occasional big files. **AI process fingerprints** = M, E_ai, W, systemic CP, G1 hits, H, error-swallowing catches; ambiguous ⇒ fingerprint (conservative).
+
+**Measurement → tier**:
+
+| Condition | Tier | Base |
+|---|---|---|
+| ≤2 signals, all human-normal debt, zero fingerprints | 90 | 90 |
+| 3~4 signals, scattered, all human-normal debt, zero fingerprints | 70-85 | 88 − signals×2 |
+| 1 isolated fingerprint (no other signals) | 70-85 | 80 |
+| Any of: M≥3 / E_ai≥3 / W≥2 / systemic CP≥3 / C≥5 / H≥3 / CD≥3 / G1 hit / 1 fingerprint + other signals / ≥5 total signals | 45 | 55 |
+| Flood: M across the core / E_ai≥5 (→G4) / systemic CP ≥6 groups / W≥4 / H≥5 | 20 | 30 |
+
+**Adjustments** (cap 95, floor 20): zero signals → +1; signals concentrated in one file (2 categories) → −3; comments all AI-template tone → −3; one major wishful betrayal ⇒ straight to the 45 tier, no stacking.
+
+**Tie-breaks**: human-normal debt ⇒ yellow zone, fingerprints ⇒ red zone, ambiguous ⇒ fingerprint; ≥2 signal categories in one file = "concentrated pollution" (heavy penalty); CP at the 2~3 boundary without the "needs syncing" qualifier ⇒ human-normal debt (70-85 only); one major betrayal + one other signal ⇒ straight 45; **when G1/G3/G4 triggers, D4 ≤55** and the total is gate-capped (G1→60, G3→45, G4→45, G1+G3/G4→40); ≥3 categories in one file ⇒ drop one more tier; **unverifiable AI authorship ⇒ neither penalized nor rewarded** (only verifiable artifacts count); signal definitions follow this file and ai-slop-signals.md — no personal lenses.
+
+---
+
+## Calibration check (S7 drift check, not a scoring rule)
+
+When the subject's profile resembles a row below, the score should land in the reference range. Deviation >3 ⇒ recheck S2/S3 — **never adjust the score to fit**. Systematic multi-project drift ⇒ the rubric needs rework (maintainer's call).
+
+| Reference profile | Reference range |
 |---|---|
-| 人类精心维护、结构边界清晰、注释讲 why | 90-93 |
-| 大但组织清晰（多"大而单一职责"文件）、成熟开源 | 86-88 |
-| 大但组织清晰、略逊于上者 | ~84 |
-| god-file 混杂（配置+状态+UI+业务混写，G1 命中） | ~60（及格线边缘） |
-| AI 过程指纹成规模（G3 或 G4 命中） | ~45 |
-| 结构性 god + AI 过程指纹并存（G1+G3/G4） | ~40 |
-| 大且混杂且低可读性 | 40-50 |
+| Lovingly human-maintained, clear boundaries, why-comments | 90-93 |
+| Big but well-organized (many "big but single-responsibility" files), mature OSS | 86-88 |
+| Big but well-organized, slightly weaker | ~84 |
+| Mixed god-file (config+state+UI+business fused, G1 hit) | ~60 (pass-line edge) |
+| AI fingerprints at scale (G3 or G4 hit) | ~45 |
+| Structural gods + AI fingerprints (G1+G3/G4) | ~40 |
+| Big, mixed, and unreadable | 40-50 |
 
-> **60 分线语义**：参考区间 ≥60 的轮廓 = 人类可维护（虽吃力）；<60 = 不适合人类直接维护。**这是本 skill 的锚**——评估者必须明确自己的判断落在哪一侧，与总分矛盾时以判断为准。
-
-> 关键区分锚：**HMCL/grok-build 式"大但组织清晰" vs PCL/N.E.K.O 式"大且混杂"**——差异只来自 RM 协议，不来自行数。
-> **先例约束**：RM 归域与「强制先例」冲突视为归域错误，按先例改判。
-> **G1 封顶语义**：总分 = min(pre-cap 加权, 封顶)；pre-cap 加权 < 封顶时按加权计（如 PCL 类项目 D1/D3 偏低会落到 60 分线以下）。
+> **60-line semantics**: profiles at ≥60 = human-maintainable (if painful); <60 = not fit for direct human maintenance. This is the skill's anchor — the evaluator must state which side their judgment lands on; conflicts resolve to the judgment.
+> Key distinction anchor: HMCL/grok-build-style "big but organized" vs PCL/N.E.K.O-style "big and mixed" — the difference comes from the RM protocol alone, never from line counts.
+> Precedent constraint: RM assignments conflicting with the binding precedents are errors — reassign per precedent.
+> **G1 cap semantics**: total = min(pre-cap weighted, cap); when the pre-cap weighted score is below the cap, the weighted score stands (e.g. PCL-like projects with low D1/D3 land below the 60 line).
 
 ---
 
-## 附：一致性自检（两次评估收敛 ≤3 分）
+## Consistency self-check (two runs converge within ≤3)
 
-两次总分差 >3 分按序排查（**不允许对总分讨价还价**）：
-1. 比对测量单 M1-M13（特别注意 M8/M9 排除口径、M10 词表）→ 不一致重跑命令。
-2. 比对采样范围 → 以深者为有效。
-3. 比对 RM 归域 → 逐条核对子域证据 + 强制先例。
-4. 比对红/黄/绿计数与档位 → 边界统一取较低档。
-5. 比对微调触发条件（枚举的、可复现）。
-6. 仍不一致 → 取更严（更低）的分并声明分歧点。
-7. **60 分流复核**：若两个评估者对同一项目的 60 线两侧判断分歧（一个 ≥60 一个 <60），回到核心判据「愿不愿亲手维护」裁定侧别——该答案决定最终落在哪一侧，机械分随之修正。
+Totals differing by >3 ⇒ check in order (**no bargaining over totals**):
+1. Compare M1-M13 sheets (especially M8/M9 exclusion lenses, M10 wordlist) ⇒ rerun commands on mismatch.
+2. Compare sampling scopes ⇒ the deeper one wins.
+3. Compare RM domain assignments ⇒ per-sub-domain evidence + binding precedents.
+4. Compare red/yellow/green counts and tiers ⇒ **compare both sides' boundary records item by item and re-verify the evidence** (rule 8).
+5. For D3 divergence: first confirm both runs used the **same comment sampling frame and the same decision tree**; then compare per-comment classifications.
+6. Compare adjustment triggers (enumerated, reproducible).
+7. Still divergent ⇒ take the stricter (lower) score and declare the disagreement.
+8. **60-split review**: if two evaluators land on opposite sides of 60, return to the core question "would you maintain it yourself" to arbitrate the side — the answer decides the side, mechanical scores follow.
 
-**波动主要来源及封堵**：职责混杂 → RM 协议（枚举+计数+先例+仲裁器）；注释质量 → R/S/H 计数（采样 N=min(20,总数) 分类）；复制粘贴/许愿/AI 标记 → 固定定义（SIG Type-1、系统性"需同步"口径、P_fail、M8 收窄清单、M9 排除口径）；大文件是否扣分 → "大但单一职责永不进黄/红"；定性判断 → 只允许档内 ±5 且带证据。
+**Main variance sources and their seals**: responsibility mixing ⇒ RM protocol (enumeration + counting + precedents + arbiter); comment quality ⇒ fixed sampling frame + decision tree + I/R/S/H counts; copy-paste/wishes/AI markers ⇒ fixed definitions (M5 procedure + group definition, systemic "needs syncing" lens, P_fail, M8 narrowed list, M9 exclusion lens); big-file penalties ⇒ "big but single-responsibility never yellow/red"; qualitative judgments ⇒ within-tier ±5 with evidence and boundary records only.

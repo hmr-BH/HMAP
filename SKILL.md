@@ -1,146 +1,154 @@
 ---
 name: human-maintainability
-version: 1.0.0
-description: "对指定编程项目进行人类可维护性评估（HMAP，Human Maintainability Assessment of Programming Projects），输出 0-100 分 + 九档定性 + 分维度得分 + 带 文件:行号 证据的问题清单，重点识别 vibe coding / AI 生成的屎山代码。命中关键词：评估项目可维护性 / 给项目打分 / 代码质量评估 / 可读性评分 / AI屎山检测 / vibe coding 体检 / 是否适合人类维护 / HMAP / human maintainability。反触发：用户要求修复、重构、优化、改写代码时不要触发本 skill，本 skill 只评估不修改。"
+version: 1.0.2
+description: "Assess a programming project's HUMAN maintainability (HMAP): 0-100 score, nine-tier verdict, per-dimension scores, and file:line evidence — built to catch vibe-coding / AI-generated slop. Triggers: assess maintainability / rate this project / code quality score / readability score / AI slop detection / vibe coding check / HMAP / human maintainability / 评估项目可维护性 / 给项目打分 / 代码质量评估 / 可读性评分 / AI屎山检测 / vibe coding 体检 / 是否适合人类维护. Anti-trigger: the user asks to fix, refactor, optimize, or write code — that is a different task; this skill only assesses, never modifies."
 ---
 
-# human-maintainability（HMAP）
+# human-maintainability (HMAP)
 
-Human Maintainability Assessment of Programming Projects —— 评估一个编程项目**是否适合人类程序员维护**，输出 0-100 分与九档定性，并对 vibe coding / AI 生成的屎山代码做专项取证。
+Human Maintainability Assessment of Programming Projects — scores whether a project is maintainable by **human programmers** (0-100, nine tiers), with dedicated forensics for vibe-coding / AI-generated slop.
 
-**核心原则：本 skill 只评估、不修改。** 评估完成后绝不顺手改代码、不重构、不修 bug；问题只写进报告，不碰源文件。
+**Core principle: assess only, never modify.** No refactoring, no bug fixes, no touching source files; findings go into the report, period.
 
-## 触发与反触发
+## Trigger / anti-trigger
 
-- **触发**：用户对任意路径的项目提出"评估可维护性 / 给项目打分 / 检查是不是 AI 屎山 / 代码质量如何 / 适不适合人类维护"等意图，且附带或可推断出目标路径。
-- **反触发**：用户是要修 bug、重构、加功能、优化性能、写代码——这是别的任务，不要套用本 skill。先评估后提"顺便修复"，评估完成后按新指令另行处理。
+- **Trigger**: the user asks to "assess maintainability / score this project / check for AI slop / rate code quality / is it human-maintainable" for any path, with the target given or inferable.
+- **Anti-trigger**: the user wants bugs fixed, refactoring, features, or performance work — do NOT apply this skill. If asked to "assess then fix", finish the assessment first; handle fixes only under a new instruction.
 
-## 评估模型（4 维加权，满分 100）
+## Scoring model (4 weighted dimensions, 100 max)
 
-> **核心原则（打分前必读）**：这是**人类可读 & 可维护性评估**，不是**代码规范审查**——注释齐全、命名一致、DRY 等"规范"本身不加分，只有服务于人类理解与维护才加分。**核心判据**：读完代码自问「这个项目交给你，你愿意亲自维护它吗？为什么？」，总分必须与答案一致。
+> **Read before scoring**: this is a **human readability & maintainability** assessment, not a style-compliance review — comment coverage, naming consistency, DRY and similar "standards" earn no points by themselves, only when they serve human understanding and maintenance. **Core question**: after reading the code, ask yourself "if this project were handed to you, would you maintain it yourself? Why?" The total score must agree with the answer.
 >
-> **黑猫白猫原则（一视同仁）**：不排斥 AI 写代码、不排斥大项目、维护者人数不计入——AI 来源、体量、人数**永不作为判据**，只评"产物是否妨碍人类维护"。README 只看承诺是否实现（整洁度/广告/营销/缺失一律不扣）。
+> **Black cat, white cat — equal treatment**: AI authorship, project size, and maintainer count are NEVER scoring criteria — only whether the artifact obstructs human maintenance. READMEs are checked only for promise fulfillment (tidiness/ads/marketing/absence are not penalized).
 
-| 维度 | 权重 | 核心问题 |
-|------|------|---------|
-| 设计合理性与技术诚实性 | 25 | 架构匹配问题复杂度吗？承诺经得起代码验证吗？有技术思维（测量/取舍）还是纯许愿？测试给维护者安全感吗？ |
-| 可追踪性与心智负担 | 30 | 人类能追踪"请求→代码"吗？职责清晰还是啥都写一块？改动一处需知几处？人类记不住庞杂结构、得靠外置文档吗？ |
-| 人类可读性与自我解释性 | 15 | 代码能自我解释吗？命名/注释是帮人懂"为什么"，还是徒有其表/写给 AI 看？ |
-| AI 屎山与许愿痕迹（反向计分） | 30 | 承诺背离、过度工程、源码内联 AI 过程标记、结构性 god（大且混杂）、系统性复制粘贴、调试残留、幻觉注释——痕迹越多分越低 |
+| Dimension | Weight | Key question |
+|---|---|---|
+| D1 Design soundness & technical honesty | 25 | Does the architecture match the problem's complexity? Do promises survive code verification? Real engineering thinking (measurement/trade-offs) or wishful thinking? Do tests give maintainers safety? |
+| D2 Traceability & mental load | 30 | Can a human trace request → code? Clear responsibilities or everything fused together? Change one thing — how many places must you know? Must the structure be memorized via external docs? |
+| D3 Human readability & self-explanation | 15 | Does the code explain itself? Do names/comments convey "why", or are they decorative / written for AI? |
+| D4 AI slop & wishful-thinking residue (reverse) | 30 | Promise betrayal, over-engineering, source-inlined AI process markers, structural gods (big AND mixed), systemic copy-paste, debug residue, hallucinated comments — more residue, lower score |
 
-每维度按 0-100 打分，加权求和后套结构性硬闸门封顶。**打分细则（测量表 M1-M13、档位映射、RM 职责混杂协议、平局规则）见 [`references/scoring-rubric.md`](references/scoring-rubric.md)，信号清单见 [`references/ai-slop-signals.md`](references/ai-slop-signals.md)。**
+Score each dimension 0-100, weight-sum, then apply structural hard gates. **Detailed rules (M1-M13 measurement table, tier mapping, RM responsibility-mixing protocol, tie-breaks): [`references/scoring-rubric.md`](references/scoring-rubric.md); signal catalog: [`references/ai-slop-signals.md`](references/ai-slop-signals.md); worked scoring example: [`references/golden-example.md`](references/golden-example.md).**
 
-> **结构性硬闸门（及格线判定）**：存在使人类无法/极难维护的结构性事实时总分硬性封顶——核心 god-function/god-file 且职责混杂 → **60（及格线边缘）**；源码内联 AI 过程标记成规模 → **45**；热路径 AI 排查残留 ≥5 处（坐标/偏移特判、魔法偏移、排查叙事内嵌、探针残留；**普通裸 println 不算**）→ **45**；**G1 与 G3/G4 同时命中 → 40**。维度加权再高也不得超过封顶。**闸门只判结构，与体量、人数、AI 来源无关**；AGENTS.md/CLAUDE.md 等顶层约定文件不算 AI 过程标记。
+> **Structural hard gates (pass-line verdicts)**: structural facts that make human maintenance impossible or infeasible hard-cap the total — core god-function/god-file that is also responsibility-mixed → **60** (pass-line edge); source-inlined AI process markers at scale → **45**; AI debugging residue in hot paths ≥5 (coordinate/offset special-cases, magic offsets, embedded debugging narratives, probe residue; **ordinary bare printlns excluded**) → **45**; **G1 together with G3/G4 → 40**. Dimension scores may not lift the total above a cap. **Gates judge structure only — never size, headcount, or AI authorship**; top-level convention files (AGENTS.md/CLAUDE.md etc.) are not AI process markers.
 
-## 九档评分标准（60 分流：≥60 及格 = 人类可维护，<60 不及格 = 不适合人类直接维护）
+## Nine tiers (60 is the split: ≥60 pass = human-maintainable; <60 fail = unfit for direct human maintenance)
 
-| 分数段 | 档位定性 |
-|--------|---------|
-| 90-100 | **适合，体验极佳**：职责边界清晰、请求→代码可追踪，注释讲"为什么"，承诺全部兑现 |
-| 80-90 | **适合，顺畅**：整体通畅，仅个别可接受债务；**无结构性混杂、无成规模 AI 过程指纹** |
-| 70-80 | **适合，有负担**：已有跨文件追踪成本、个别庞杂点或小部分 AI 痕迹 |
-| 60-70 | **及格线边缘：勉强能维护**：有明显 AI 屎山痕迹或结构庞杂苗头（god-file/庞杂函数），接手吃力但人类仍可维护 |
-| 50-60 | **不及格：不适宜人类直接维护**：职责混杂严重、可读性差，人类接手成本不成比例 |
-| 40-50 | **不适宜**：核心庞杂、结构不可追踪，必须靠外置文档/AI 才能理解 |
-| 30-40 | **不适宜（更重）**：结构性 god 泛滥，人类无法安全改动 |
-| 20-30 | **极不适宜**：结构性 god + AI 过程指纹遍布 |
-| 0-20 | **只能 AI agent 维护**：完全屎山，无药可救 |
+| Range | Verdict |
+|---|---|
+| 90-100 | **Ideal**: clear responsibility boundaries, request→code traceable, comments explain "why", all promises kept |
+| 80-90 | **Smooth**: generally fluent, only acceptable debt; **no structural mixing, no AI fingerprints at scale** |
+| 70-80 | **Burdened**: cross-file tracing costs, a few bloated spots, or minor AI traces |
+| 60-70 | **Pass-line edge**: visible AI-slop traces or structural bloat emerging (god-file/bloated functions); takeover is hard but humans can still maintain it |
+| 50-60 | **Fail — unfit for direct human maintenance**: severe responsibility mixing, poor readability; takeover cost disproportionate |
+| 40-50 | **Unfit**: core bloated, structure untraceable; external docs/AI required to understand |
+| 30-40 | **Unfit (heavier)**: structural gods rampant; humans cannot change code safely |
+| 20-30 | **Extremely unfit**: structural gods + AI process fingerprints everywhere |
+| 0-20 | **AI-agent-only**: total slop, beyond rescue |
 
-分数段边界语义：`>=90` 落 90 档；依此类推，`<20` 落 0 档。
-**60 分流是本 skill 的锚**：≥60 = 及格 = 人类程序员可以维护（符合百分制考试直觉）；<60 = 不及格 = 不适合人类直接维护。档位描述嵌入的是**"人类能否维护"判据而非表面质量**——结构性混杂只能落 60 以下；AI 过程指纹成规模只能落 60 以下。
+Boundary semantics: `>=90` lands in the 90 tier; and so on; `<20` in the 0 tier.
+**The 60 split is this skill's anchor**: ≥60 = pass = a human programmer can maintain it (matching cent exam intuition); <60 = fail = unfit for direct human maintenance. Tier descriptions encode the "can humans maintain it" judgment, not surface quality — structural mixing lands below 60; AI fingerprints at scale land below 60.
 
-## 评估工作流
+## Assessment workflow
 
-**开始前 MUST**：先用 Read 读取 [`references/scoring-rubric.md`](references/scoring-rubric.md) 与 [`references/ai-slop-signals.md`](references/ai-slop-signals.md)，统一打分口径与测量命令。
+**Before starting you MUST read** [`references/scoring-rubric.md`](references/scoring-rubric.md), [`references/ai-slop-signals.md`](references/ai-slop-signals.md), and [`references/golden-example.md`](references/golden-example.md) to align scoring lenses and calibration.
 
-### Step 1：解析参数
+### Step 1: parse arguments
 
-- **目标路径**（必需）：用户指定的项目目录，相对/绝对路径皆可；未指定时默认为当前工作目录。
-- `--depth=轻|中|深`（可选）：采样强度，控制读取文件数量。默认"中"。
-- `--output=路径`（可选）：把完整报告写入指定 md 文件。
-- `--focus=维度名`（可选）：只评估指定维度（设计合理性/可追踪性/可读性/AI屎山），不出总分。
+- **Target path** (required): the project directory, relative or absolute; defaults to the current working directory.
+- `--depth=light|medium|deep` (optional): sampling intensity. Default medium.
+- `--output=path` (optional): write the full report to the given markdown file.
+- `--focus=dimension` (optional): assess only the named dimension (D1 design / D2 traceability / D3 readability / D4 slop); no total score.
 
-### Step 2：清点项目
+### Step 2: inventory
 
-用 Glob / Grep / Bash 统计：文件总数与文件树（排除依赖与构建产物目录：`node_modules`、`.git`、`dist`、`build`、`venv`、`target`、`__pycache__`、`.next`、`bin/Release`、`obj` 等）；语言分布、估计总行数；README、构建/包管理入口、入口文件、测试目录定位。
+Glob / Grep / Bash: total file count and file tree (exclude dependency & build dirs: `node_modules`, `.git`, `dist`, `build`, `venv`, `target`, `__pycache__`, `.next`, `bin/Release`, `obj`, etc.); language mix and estimated total LOC; locate README, build/package entry, entry file, test directories.
 
-### Step 3：采样协议
+### Step 3: sampling protocol
 
-取样并**声明采样范围与置信度**。未读文件不能当读过来打分。
+Sample and **declare the sampling scope and confidence**. Unread files must not be scored as if read.
 
-| 项目规模 | 采样策略 | 默认读取量 |
-|---------|---------|-----------|
-| ≤50 个源码文件 | 全读 | 全部 |
-| 50-500 | 入口 + 核心模块 + 各层代表 + 最大文件 + 注释最密集文件 | 15-30 个文件 |
-| >500 | 分层采样，覆盖入口、业务核心、边界/基础设施各若干 | 30-60 个文件 |
+| Project size | Sampling strategy | Default reads |
+|---|---|---|
+| ≤50 source files | read all | all |
+| 50-500 | entry + core modules + per-layer representatives + largest files + most-commented files | 15-30 files |
+| >500 | stratified sampling: entry, business core, boundary/infra | 30-60 files |
 
-必读清单（无论规模）：README、构建/包管理入口、入口文件、体积最大的源码文件、最近修改的文件。`--depth=深` 时读取量翻倍；`--depth=轻` 时减半。**两次评估必须固定同一采样深度。**
+Must-read regardless of size: README, build/package entry, entry file, largest source file, most recently modified files. `--depth=deep` doubles the read count; `--depth=light` halves it. **Repeated evaluations must fix the same sampling depth.**
 
-### Step 4：逐维度取证
+### Step 4: per-dimension forensics
 
-- **先测量（打分前必做）**：按 `references/scoring-rubric.md` 的「全局客观测量表」跑 M1-M13（文件/函数行数分布、空 catch、复制粘贴、注释四分类、测试断言、AI 过程标记、调试残留、垃圾桶名等），数值填测量单。**测量值决定档位，先于印象。**
-- **承诺-实现核对（必做）**：读 README/文档列承诺 → 逐条代码验证（声称"性能提升"却只加抽象层、声称"可扩展"却无扩展点的，记为重大许愿证据）。README 只看承诺；整洁度/广告/缺失不扣分。
-- **职责混杂用 RM 协议裁决**：对每个 ≥400 行函数 / ≥1800 行文件执行 RM 协议（枚举职责域→计数→先例→仲裁器），判定"单一职责 vs 混杂"。大但职责单一不扣，庞杂才扣。
-- 每一条评分判断必须落到 `文件:行号` 证据；只有印象、没有证据的判断不得作为评分依据。
+- **Measure first (mandatory before scoring)**: run M1-M13 from the rubric's global measurement table and fill the sheet. **Measured values decide tiers — before impressions.**
+- **Promise verification (mandatory)**: list README/doc promises → verify each in code (claiming "performance gains" while only adding abstraction layers, claiming "extensible" with no extension points ⇒ major wish evidence). README: promises only; tidiness/ads/absence not penalized.
+- **Responsibility mixing via the RM protocol**: every ≥400-line function / ≥1800-line file goes through RM (enumerate domains → count → precedents → arbiter) for "single responsibility vs mixed". Big-but-single is not penalized; bloat is.
+- **Boundary decisions**: when a measurement lands on a boundary or signals conflict, record a boundary decision per rubric rule 8 (object / both-side reasoning / final choice / evidence) — no systematic rounding to either side.
+- Every scoring judgment must land on `file:line` evidence; impressions without evidence may not be used.
 
-### Step 5：加权打分与结构性硬闸门
+### Step 5: weighted scoring & structural gates
 
-- 按 `references/scoring-rubric.md` 的「测量值→锚点映射」逐维度查表定档 → 枚举微调 → 得四维原始分。
-- 加权求和 = 0.25×D1 + 0.30×D2 + 0.15×D3 + 0.30×D4；套结构性硬闸门（G1/G3/G4，多命中取最低封顶）。
-- **判据强制**：如实回答「你愿意亲自维护它吗？为什么？」——"不愿意"对应总分 ≤60、"完全不可能"≤40。若答案如此而总分未到封顶，说明被打分被工程表面（测试/CI/文档纪律）迷惑，必须下调。
-- **60 分流校验（必做，本 skill 的锚）**：回答「这个项目落在 60 分线哪一侧——≥60 及格（人类可维护），还是 <60 不及格（不适合人类直接维护）？」若落在 <60 侧而总分 ≥60，说明机械分被表面质量骗了，**强制下调到 <60**；若落在 ≥60 侧而总分 <60，复核测量是否有误。**总分与 60 分流答案冲突时，以答案为准。**
-- 总分按九档映射落到档位，取整到整数。
-- **打分纪律**：基于测量证据，不虚高不手软；证据不足就下调置信度声明；两次评估总分差 >3 分时按细则的「一致性自检」排查，不得讨价还价。
+- Per the rubric's measurement→anchor tables: tier per dimension → enumerated adjustments → four raw scores.
+- Weighted total = 0.25×D1 + 0.30×D2 + 0.15×D3 + 0.30×D4; apply hard gates (G1/G3/G4; multiple hits → lowest cap).
+- **Forced judgment**: honestly answer "would you maintain it yourself? Why?" — "no" ⇒ total ≤60, "absolutely not" ⇒ ≤40. If the answer says so but the total hasn't reached the cap, you were dazzled by surface discipline (tests/CI/docs) — lower it.
+- **60-split check (mandatory, the anchor)**: answer "which side of the 60 line — ≥60 pass (human-maintainable) or <60 fail (unfit)?" A <60-side answer with total ≥60 ⇒ the mechanical score was fooled by surface quality — **force it below 60**; a ≥60-side answer with total <60 ⇒ recheck measurements. **On conflict, the answer wins.**
+- Map the total to the nine tiers; round to integer.
+- **Scoring discipline**: evidence-based, neither inflated nor soft; declare low confidence when evidence is thin; totals differing by >3 across two evaluations ⇒ run the rubric's consistency self-check — no bargaining.
 
-### Step 6：输出报告
+### Step 6: report
 
-按下方模板输出。默认直接输出到对话；若给了 `--output`，先输出精简版到对话，完整版写入文件并告知路径。
+- **Output language rule (mandatory): the final report MUST be written in the same language as the user's input** (user writes Chinese ⇒ report in Chinese; English ⇒ English; and so on). The skill text itself is English; this rule governs only the delivered report.
+- Default: full report in the conversation. With `--output`: a condensed version in the conversation, the full report written to the file — state the path.
 
-## 报告格式模板
+## Report template
 
 ```markdown
-## HMAP 评估报告：<项目名>（<目标路径>）
+## HMAP Report: <project name> (<target path>)
 
-**总分：XX/100 — <档位定性>**
+**Total: XX/100 — <tier verdict>**
 
-评估范围：共 N 个源码文件，实际读取 M 个（采样深度：轻/中/深），置信度：高/中/低。测量单：M1-M13 关键数值（≤ 5 行）。
+Scope: N source files, M read (depth: light/medium/deep), confidence: high/medium/low. Measurement sheet: key M1-M13 values (≤5 lines).
 
-### 分维度得分
+### Dimension scores
 
-| 维度 | 原始分 | 权重 | 加权分 | 一句话理由 |
-|------|-------|------|-------|-----------|
-| 设计合理性与技术诚实性 |  | 25 |  |  |
-| 可追踪性与心智负担 |  | 30 |  |  |
-| 人类可读性与自我解释性 |  | 15 |  |  |
-| AI 屎山与许愿痕迹 |  | 30 |  |  |
+| Dimension | Raw | Weight | Weighted | One-line rationale |
+|---|---|---|---|---|
+| D1 Design soundness & honesty |  | 25 |  |  |
+| D2 Traceability & mental load |  | 30 |  |  |
+| D3 Readability & self-explanation |  | 15 |  |  |
+| D4 AI slop & wishful residue |  | 30 |  |  |
 
-### 总体评价
+### Overall assessment
 
-（3-5 句话，说明整体印象与主要矛盾）
+(3-5 sentences: overall impression and main tensions)
 
-### 优点（有据）
+### Strengths (evidenced)
 
-- `文件:行号` —— 优点说明
+- `file:line` — strength
 
-### 主要问题（有据）
+### Key problems (evidenced, most severe first)
 
-- `文件:行号` —— 问题说明（按严重程度从高到低）
+- `file:line` — problem
 
-### AI 屎山专项发现
+### AI-slop findings
 
-- `文件:行号` —— 屎山信号（标注属于 `references/ai-slop-signals.md` 的哪类信号）
+- `file:line` — slop signal (cite the signal number/name from `references/ai-slop-signals.md`)
 
-### 结论与建议
+### Evidence appendix (mandatory)
 
-- 是否适合人类程序员维护（对应九档判语）
-- 若得分 <60：说明问题最集中的 1-3 处，以及"建议由人类修还是 AI agent 修"
-- 命中的结构性硬闸门（若有）+ 判据强制回答
-- 可选改进建议（只建议，不实施）
+- Comment sample classification: every sampled comment → I/R/S/H with its classification reason
+- T_trace hop lists for the 3 probed journeys; T_impact probe result; D (decorative abstraction) enumeration
+- All boundary decisions (object / both-side reasoning / final choice / evidence)
+
+### Conclusion & recommendations
+
+- Fit for human maintenance? (nine-tier verdict)
+- If <60: the 1-3 worst concentrations, and whether a human or an AI agent should fix them
+- Hard gates hit (if any) + forced-judgment answer
+- Optional improvements (suggest only, never implement)
 ```
 
-## 边界纪律
+## Boundary discipline
 
-1. **只评估不修改**：不重构、不修 bug、不改任何源文件。
-2. **不虚报证据**：拿不出 `文件:行号` 的判断不许写进报告；引用行号前确认该行存在。
-3. **诚实打分**：分数必须能从测量单与档位映射推导，采样不足要声明，宁低置信不虚高。
-4. **不越范围**：`--focus` 指定维度时只评该维度。
+1. **Assess only, never modify**: no refactoring, no bug fixes, no touching any source file.
+2. **No fabricated evidence**: judgments without `file:line` evidence may not enter the report; verify the cited line exists before citing.
+3. **Honest scoring**: the score must be derivable from the measurement sheet and tier tables; declare thin sampling; prefer low confidence over inflation.
+4. **Stay in scope**: with `--focus`, assess only that dimension.

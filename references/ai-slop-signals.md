@@ -1,188 +1,188 @@
-# AI 屎山信号清单（ai-slop-signals）
+# AI slop signal catalog
 
-维度 4「AI 屎山与许愿痕迹」的取证清单。每条信号给识别方法、正反例、扣分联动。**扣分口径与测量表（M1-M13）以 `scoring-rubric.md` 为准**，本文件只负责"认得出 + 归到哪"。
+The forensics list for D4 (AI slop & wishful-thinking residue). Each signal gives identification, counter/positive examples, and scoring linkage. **Penalty lenses and measurement-table definitions (M1-M13) follow scoring-rubric.md** — this file only decides "recognized as what, filed where".
 
-**判断原则**：不是"有 AI 味就扣分"，而是**"是否妨碍人类维护"**。零星残留属正常开发残留；成规模、集中污染、影响阅读和修改的才是屎山。
+**Judgment principle**: not "smells like AI ⇒ penalize", but "does it obstruct human maintenance". Stray residue is normal development debris; scaled, concentrated residue that obstructs reading and changing is slop.
 
-**核心区分**：
-- **人类正常债务**（轻扣，不降出 90 档）= 复制粘贴、死代码、个别大文件、个别死导出——人类项目普遍存在。
-- **AI 过程指纹**（重罚，可触发硬闸门）= 源码内联 AI 编码过程标记、AI 排查残留混入热路径、系统性 god-file/god-function。
-
----
-
-## 许愿检测协议（MUST，评估前先做）
-
-1. **列承诺**：读 README/文档/关键 docstring 列全部承诺（性能/能力/架构/扩展性），记 `文件:行号`。
-2. **逐条验证**：声称"性能优化"→ 是否真降复杂度/开销，还是加了开销（多余抽象、全量复制、冷路径缓存）反而更慢；"可扩展"→ 是否有真实第二实现/扩展点；"支持功能 X"→ 真实现还是占位/TODO。**声称优化却更慢 = 最典型的许愿信号。**
-3. **记证据**：每条结论带 `文件:行号`，验证不通过的进「AI 屎山专项发现」。
+**Core distinction**:
+- **Human-normal debt** (light penalty; never alone drops a project out of the 90s) = copy-paste, dead code, a few big files, a few dead exports — universal in human projects.
+- **AI process fingerprints** (heavy penalty; can trigger hard gates) = AI-coding-process markers inlined in source, AI debugging residue in hot paths, systemic god-files/god-functions.
 
 ---
 
-## 信号 1：承诺-实现背离（许愿，最严重）
+## Wish-detection protocol (MUST, run before scoring)
 
-**识别**：声称的能力/性能/架构在代码里验证不成立，甚至反向成立。
-
-**反例**：README 声称"多级缓存+批处理实现 10 倍提升"，实际每次调用重建整条管道、逐条同步处理、重复全量求和——比简单循环更慢。
-**正例**：`# 实测：数据量 <1 万时直接循环最快，等有真实瓶颈再优化`——有测量结论、有理由。
-
-**联动**：P_fail 计入维度 1；重大许愿（性能承诺实际加开销）→ 维度 4 直接 45 档判定。
+1. **List promises**: read README/docs/key docstrings; list every promise (performance/capability/architecture/extensibility) with `file:line`.
+2. **Verify one by one**: "performance optimization" ⇒ does it really cut complexity/overhead, or does it add overhead (extra abstraction layers, full copies, cold-path caching) and end up slower; "extensible" ⇒ real second implementation / extension points?; "supports X" ⇒ really implemented, or placeholder/TODO. **Claiming speed while being slower = the prototypical wish signal.**
+3. **Record evidence**: every conclusion carries `file:line`; failures enter the "AI-slop findings" section.
 
 ---
 
-## 信号 2：源码内联 AI 过程标记
+## Signal 1: promise-implementation betrayal (wishful thinking, most severe)
 
-**识别**：**源码文件内**（如 .py/.ts/.cpp）的 AI 编码过程标记/留痕：`"Codex P1/P2"` 审查标记、`@anchor.probe` 探针引用、`"第N轮"` 修复复盘、"review round N on PR #xxx" 等。人类维护者必须逐一过滤才能读。
+**Identify**: a claimed capability/performance/architecture fails code verification, or verifies inverted.
 
-**判定标准**：一条注释，人类维护者需要它吗？还是只有 AI 编码代理需要它？
+**Counter-example**: README claims "multi-level cache + batching, 10× faster"; the code rebuilds the whole pipeline on every call, processes items synchronously one by one, and re-sums everything — slower than a plain loop.
+**Positive example**: `# measured: below 10k rows a plain loop is fastest; optimize when a real bottleneck appears` — a measured conclusion with reasons.
 
-**反例**：`# (Codex P2) 修复 #2841：此函数修改后需同步更新 main_routers 的 monkeypatch 绑定`——人类看到的是 AI 审查轮次元数据。
-**正例**：`# 只取 value：调用方不需要 key，过滤掉省内存；空表直接返回`——解释"为什么"。
-
-**排除项（不算）**：AGENTS.md / CLAUDE.md / .github/instructions / copilot-instructions 等**顶层约定与文档文件**（正常工程实践）；AI 辅助工具链（CI、agent 配置）不构成。**只有源码文件内联的留痕才算。**
-
-**联动**：按 M8 计数（收窄词表）；核心内 M≥3 → 维度 4 45 档；M≥5 散布核心/热路径且妨碍阅读 → G3 封顶 45。
+**Linkage**: P_fail counts into D1; a major wish (performance promise actually adds overhead) ⇒ D4 straight to the 45 tier.
 
 ---
 
-## 信号 3：AI 排查残留混入热路径
+## Signal 2: AI process markers inlined in source
 
-**识别**：AI 排查 bug 的循环过程没清理干净，直接留在核心代码里——特征是**不透明、依赖外部调试上下文、人类难以安全移除**：
-- 热路径采样函数内嵌坐标特定调试块（`if (debug && pos.x==728 && pos.y==-8) fprintf(...)`）。
-- 魔法偏移内存校验（`IsBadReadPtr(baseM + 0x34001)`）在每 chunk 生产路径执行。
-- 源码文件头嵌着整段排查复盘日志（"第 1 轮 0xC0000005…第 2 轮…"）。
-- 热路径无条件 `print("[DEBUG] ...")`（无上下文、看不出用途）。
+**Identify**: AI coding-process markers/traces **inside source files** (.py/.ts/.cpp): `"Codex P1/P2"` review tags, `@anchor.probe` probe references, `"第N轮"` fix retrospectives, `"review round N on PR #xxx"`. Human maintainers must filter them out one by one to read.
 
-**不算（E_debug 普通调试输出，D4 轻微信号，不触发 G4）**：简单的裸 `println!/eprintln!/console.log`——即使绕过日志系统，只要人类一眼能看懂、一行能修复（如 `println!("natives is None")`），只是"疏漏"而非"排查残留"。
+**Test**: does a human maintainer need this comment — or only an AI coding agent?
 
-**识别**：挑最热采样函数看调试插桩；Grep `getenv|fprintf|debug|IsBadReadPtr|print(`；统计 env 开关数；`.artifacts/`、`.investigations/` 等过程目录是"AI 反复乱搞"的物证。
+**Counter-example**: `# (Codex P2) fix #2841: after changing this function, sync the monkeypatch binding in main_routers` — what a human sees is AI review-round metadata.
+**Positive example**: `# keep only value: callers don't need keys; dropping them saves memory; return early on empty` — explains why.
 
-**联动**：按 M9 分两类——**E_ai（坐标/偏移/叙事/探针残留）净数 ≥5 → G4 封顶 45**；E_debug（普通裸打印）≥8 处计 1 个 D4 信号（人类正常债务级），不触发 G4。
+**Exclusions (not signals)**: AGENTS.md / CLAUDE.md / .github/instructions / copilot-instructions and other **top-level convention and documentation files** (normal engineering practice); AI toolchains (CI, agent configs) don't count. **Only traces inlined in source files count.**
 
----
-
-## 信号 4：结构性 god-function / god-file（大且混杂）
-
-**识别**：核心业务逻辑集中在单个超大函数/超大文件，**且职责混杂、难以追踪**——大但职责单一、逻辑清晰的不算（企业长流程不硬拆）。候选线：**函数 ≥400 行 / 文件 ≥1800 行**，进 RM 协议判定（`scoring-rubric.md` 的「职责混杂判定协议」）；R_func ≥3 或 R_file ≥3 → 混杂。
-
-**反例**：`main.py` 3000 行，配置解析、全局状态、HTTP 路由、数据库操作、UI 渲染全在里面，核心函数 400 行中途改全局变量。
-**正例**：业务按职责分布在对应模块，文件边界=逻辑边界，单函数 <100 行；或 4000 行但职责单一、方法提取清晰（grok-build dispatch、HMCL 设置页）。
-
-**联动**：混杂 → G1 封顶 60（及格线边缘）+ 维度 2 ≤45 + D1 ≤70（结构否决）；大但单一职责 → 不触发、维度 2 不降档。
+**Linkage**: counted per M8 (narrowed wordlist); M≥3 in core ⇒ D4 45 tier; M≥5 spread across core/hot paths and obstructing reading ⇒ G3, cap 45.
 
 ---
 
-## 信号 5：幻觉注释
+## Signal 3: AI debugging residue in hot paths
 
-**识别**：注释提到的函数/文件/参数/行为在代码里不存在或与事实矛盾（AI 生成后代码改了注释没改，或编造了不存在的 API）。
+**Identify**: the AI's bug-hunting loop left uncleaned in core code — opaque, dependent on external debugging context, unsafe for humans to remove:
+- coordinate-specific debug blocks embedded in hot sampling functions (`if (debug && pos.x==728 && pos.y==-8) fprintf(...)`);
+- magic-offset memory checks (`IsBadReadPtr(baseM + 0x34001)`) executed on every chunk production path;
+- a source file header embedding a whole debugging retrospective ("round 1: 0xC0000005… round 2: …");
+- unconditional `print("[DEBUG] ...")` in hot paths (no context, no discernible purpose).
 
-**反例**：`# 调用 get_cached_data 加速（配置见 redis_client）` + `data = fetch_from_db()` —— 函数和配置对象都不存在。
-**正例**：`# 直接查库不缓存：该接口调用频率极低（日均个位数），不值得引入缓存层`。
+**NOT this signal (E_debug, ordinary debug output)**: simple bare println/eprintln/console.log — even bypassing the logging system — as long as a human understands it at a glance and can fix it in one line (e.g. `println!("natives is None")`): an omission, not debugging residue.
 
-**联动**：计 H；H≥3 → 维度 4 45 档；单条计入维度 3 的 H 判定。
+**How**: inspect debug instrumentation in the hottest sampling functions; grep `getenv|fprintf|debug|IsBadReadPtr|print(`; count env switches; `.artifacts/`, `.investigations/`-style process directories are material evidence of repeated AI flailing.
 
----
-
-## 信号 6：复述型注释（只描述操作，不讲述原因）
-
-**识别**：注释把代码翻译成自然语言，无新增信息；逐行注释频率高、每行都能从代码秒懂即为复述型。
-
-**反例**：`# 循环遍历列表中的每一项` / `# 如果 x 大于 10 则执行加法` —— 每行都在翻译代码。
-**正例**：`# 阈值取 10：低于此值是噪声数据，不参与求和` —— 讲为什么。
-
-**联动**：维度 3 按 R 计数（采样 N=min(20,总数) 分类）；R≥9 → 45 档；清单式 docstring 成规模（≥5 条复述签名）→ 45 档。
+**Linkage**: M9 splits two classes — **E_ai (coordinate/offset/narrative/probe residue) net ≥5 ⇒ G4, cap 45**; E_debug (ordinary bare prints) ≥8 = 1 D4 signal (human-normal debt), never G4.
 
 ---
 
-## 信号 7：死代码与未使用导入
+## Signal 4: structural god-function / god-file (big AND mixed)
 
-**识别**：未使用导入（对每个导入名全文检索）；定义了但从未被调用的函数/类；注释掉的整块代码留在交付源码（M12）。
+**Identify**: core business logic concentrated in a single oversized function/file **that is also responsibility-mixed and hard to trace** — big but single-responsibility and clear doesn't count (don't force-split honest long flows). Candidacy: **functions ≥400 lines / files ≥1800 lines** ⇒ RM protocol (see scoring-rubric.md); R_func ≥3 or R_file ≥3 ⇒ mixed.
 
-**反例**：`import os, sys, json, random, hashlib`（sys/random/hashlib 从未使用）+ 一个"已废弃"但从未被调用的函数。
-**正例**：无未使用导入；废弃逻辑删除，用 git 历史保留。
+**Counter-example**: 3,000-line `main.py` holding config parsing, global state, HTTP routes, DB operations, and UI rendering; a 400-line core function mutating global variables midway.
+**Positive example**: responsibilities live in their own modules, file boundaries = logic boundaries, functions <100 lines; or 4,000 lines but single-responsibility with clean method extraction (grok-build dispatch, HMCL settings page).
 
-**联动**：人类正常债务型信号（计 DZ）；注释掉的整块代码 ≥3 处 → 维度 4 45 档。
-
----
-
-## 信号 8：过度工程（为简单问题套模式）
-
-**识别**：10 行能解决的问题套上工厂/抽象基类/观察者/多层接口，没有调用方、没有扩展预期，只为"显得正规"。
-
-**反例**：为一句 `print` 引入 `Protocol` + `ConsoleSender` + `SenderFactory`，全项目只有一个调用方。
-**正例**：`def send_message(msg): print(msg)  # 当前只有控制台一种实现，等有第二种再抽象`。
-
-**联动**：维度 1 的装饰性抽象计数 D；D≥5 → 45 档。
+**Linkage**: mixed ⇒ G1 cap 60 (pass-line edge) + D2 ≤45 + D1 ≤70 (structure veto); big but single ⇒ no gate, D2 not demoted.
 
 ---
 
-## 信号 9：无效抽象与不必要的间接层
+## Signal 5: hallucinated comments
 
-**识别**：函数/类只是"转一手"，把调用原样转发，中间无任何逻辑、校验或转换；深链转发（A→B→C→D 每层无逻辑）是高发区。
+**Identify**: comments referencing functions/files/parameters/behaviors that don't exist or contradict the code (AI generated the comment, the code changed but the comment didn't, or the API was fabricated).
 
-**反例**：`get_user_name(user_id)` 只调用 `_fetch_user(user_id).name`，`_fetch_user` 只调用 `database.query_user`，三层纯转发。
-**正例**：有实际职责（缓存/校验/转换）的包装才是正当间接层。
+**Counter-example**: `# uses get_cached_data for speed (config in redis_client)` + `data = fetch_from_db()` — neither the function nor the config object exists.
+**Positive example**: `# no cache here: this endpoint is called a few times a day — a cache layer isn't worth it`.
 
----
-
-## 信号 10：无意义防御（吞异常、永假条件）
-
-**识别**：`except`/`catch` 空块、`pass`、`print`，错误被无声吞掉（M4）；对不可能为空的变量做空值检查；`if x != None and x is not None` 式重复判断；到处 try/catch 把 bug 藏起来。
-
-**反例**：`except Exception: pass  # 出错就静默，调用方永远不知道失败`。
-**正例**：`except TimeoutError: # 超时是可预期的：重试，重试仍失败则向上抛，让调用方决定`。
-
-**联动**：空 catch ≥5 → 维度 4 45 档；空块 catch 包裹关键业务逻辑记"污染集中"。
+**Linkage**: counts as H; H≥3 ⇒ D4 45 tier; each H also feeds D3's H count.
 
 ---
 
-## 信号 11：复制粘贴变体（DRY 破产）
+## Signal 6: restatement comments (describe operations, not reasons)
 
-**识别**：多段逻辑几乎相同、仅少量参数/命名不同，跨函数/文件重复。每份变体都在被调用，不报错，但改 bug 要改 N 处。
+**Identify**: comments translating code into natural language with zero new information; high per-line comment frequency where every line is self-evident from the code.
 
-**反例**：`calc_price_a` 与 `compute_price_b` 逻辑相同仅命名不同。
-**正例**：`def calc_price(items, tax_rate): return sum(item.price for item in items) * (1 + tax_rate)` 一处复用。
+**Counter-example**: `# loop over each item in the list` / `# if x is greater than 10, perform addition` — every line translated.
+**Positive example**: `# threshold is 10: below this is noise data, excluded from the sum` — explains why.
 
-**联动**：按 M5 计 CP 组数（SIG ≥6 行 Type-1 克隆）。**系统性**（≥3 组且每次改动需跨 ≥2 处调用点同步修改）→ 维度 4 45 档；未达"需同步"限定的按人类正常债务只进 70-85 档。
-
----
-
-## 信号 12：命名与功能不符
-
-**识别**：函数/变量/文件名暗示的行为与实际实现不一致，直接误导读者。
-
-**反例**：`def get_total(items): return sum(items) / len(items)` —— 名为"总数"实为"平均"。
-**识别**：抽查函数名对照函数体；文件名与目录对照实际内容。
+**Linkage**: counted as R in D3 (fixed sampling frame + decision tree); **R-share >40% ⇒ 45 tier**.
 
 ---
 
-## 信号 13：拼凑感与风格突变
+## Signal 7: dead code & unused imports
 
-**识别**：同一文件内多种命名/缩进/注释风格并存（`fetch_data`/`FetchData`/`fetchData` 混用），或同一问题在不同文件用了完全不同解法——AI 多次生成拼接的痕迹。
+**Identify**: unused imports (grep each imported name across the project); functions/classes defined but never called; commented-out code blocks left in shipped source (M12).
 
-**识别技巧**：Grep 同类符号的命名风格统计；同文件风格互斥（≥2 种命名规范）即可判定。
+**Counter-example**: `import os, sys, json, random, hashlib` (sys/random/hashlib never used) + a "deprecated" function nothing calls.
+**Positive example**: no unused imports; deprecated logic deleted — git history preserves it.
 
----
-
-## 信号 14：README 承诺未实现
-
-**识别**：README 声称的功能/性能/架构在代码里没实现或实现不一致——这是信号 1 在文档侧的体现。
-
-**反例**：README 说"支持用户注册登录"，代码里根本没有认证。
-**不算信号**：README 的广告/营销/赞助/捐赠信息；README 缺失或仅简略许可信息；README 不够整洁——都不构成信号。
-
-**联动**：README 承诺未实现随 P_fail 记入维度 1/4，不单独扣"文档质量"分。
+**Linkage**: human-normal-debt signal (DZ); commented-out code blocks ≥3 ⇒ D4 45 tier.
 
 ---
 
-## 综合判定
+## Signal 8: over-engineering (patterns for trivial problems)
 
-| 信号密度 | 维度 4 参考 | 对总分影响（权重 30） |
+**Identify**: a 10-line problem wrapped in factories/abstract base classes/observers/multi-layer interfaces with no callers and no extension expectation — just to "look proper".
+
+**Counter-example**: one `print` hidden behind `Protocol` + `ConsoleSender` + `SenderFactory`, with a single call site in the whole project.
+**Positive example**: `def send_message(msg): print(msg)  # console is the only impl for now; abstract when a second arrives`.
+
+**Linkage**: D1's decorative-abstraction count D (with the rubric's exemptions: test doubles, polymorphic call sites, documented layer boundaries); D≥5 ⇒ 45 tier.
+
+---
+
+## Signal 9: void abstractions & needless indirection
+
+**Identify**: functions/classes that merely forward the call unchanged — no logic, validation, or transformation in between; deep forwarding chains (A→B→C→D, each layer empty) are the hot zone.
+
+**Counter-example**: `get_user_name(user_id)` only calls `_fetch_user(user_id).name`, which only calls `database.query_user` — three pure forwarding layers.
+**Positive example**: a wrapper with real responsibility (caching/validation/conversion) is legitimate indirection. A fallback wrapper converting `throws` into a default value has real responsibility.
+
+---
+
+## Signal 10: vacuous defenses (swallowed exceptions, impossible conditions)
+
+**Identify**: empty `except`/`catch` blocks, `pass`, `print` — errors swallowed silently (M4); null checks on never-null variables; `if x != None and x is not None`-style redundant checks; try/catch everywhere hiding bugs.
+
+**Counter-example**: `except Exception: pass  # fail silently; the caller never knows it failed`.
+**Positive example**: `except TimeoutError:  # timeouts are expected: retry; if still failing, re-raise so the caller decides`.
+
+**Linkage**: error-swallowing empty catches ≥5 ⇒ D4 45 tier; empty catches wrapping key business logic = concentrated pollution.
+
+---
+
+## Signal 11: copy-paste variants (DRY bankruptcy)
+
+**Identify**: multiple near-identical logic blocks differing only in params/naming, repeated across functions/files. Every variant is live and correct — but a bugfix must land in N places.
+
+**Counter-example**: `calc_price_a` vs `compute_price_b` — same logic, different names.
+**Positive example**: `def calc_price(items, tax_rate): return sum(item.price for item in items) * (1 + tax_rate)` — one reuse point.
+
+**Linkage**: counted per M5's fixed procedure and group definition (SIG ≥6-line Type-1 clones; all instances of one template = 1 group). **Systemic** (≥3 groups AND every change must sync ≥2 call sites) ⇒ D4 45 tier; below the "needs syncing" qualifier ⇒ human-normal debt, 70-85 tier only.
+
+---
+
+## Signal 12: name-behavior mismatch
+
+**Identify**: function/variable/file names implying behavior the implementation doesn't have — directly misleading readers.
+
+**Counter-example**: `def get_total(items): return sum(items) / len(items)` — named "total", actually "average".
+**How**: spot-check function names against bodies; file/directory names against actual contents.
+
+---
+
+## Signal 13: patchwork feel & style whiplash
+
+**Identify**: multiple naming/indentation/comment styles coexisting in one file (`fetch_data`/`FetchData`/`fetchData` mixed), or the same problem solved with completely different approaches in different files — seams of multiple AI generation rounds.
+
+**How**: grep naming-style statistics for same-kind symbols; ≥2 mutually exclusive conventions in one file ⇒ confirmed.
+
+---
+
+## Signal 14: README promises unfulfilled
+
+**Identify**: features/performance/architecture claimed in the README are missing or inconsistent in code — signal 1 on the documentation side.
+
+**Counter-example**: README says "supports user registration and login"; the code has no authentication at all.
+**NOT signals**: README ads/marketing/sponsor/donation blocks; missing or minimal README; untidy README — none of these count.
+
+**Linkage**: unfulfilled README promises join P_fail in D1/D4; no separate "documentation quality" penalty.
+
+---
+
+## Aggregate judgment
+
+| Signal density | D4 reference | Total impact (weight 30) |
 |---|---|---|
-| 几乎无信号（≤1 处零星） | 85-95 | 加分，有上冲空间 |
-| 个别信号（2-4 处，人类正常债务） | 75-85 | 中性 |
-| 成规模（≥5 处，或一处重大许愿/AI 过程指纹） | 45-60 | 显著下压，可能触发硬闸门 |
-| 泛滥（AI 过程指纹遍布） | ≤40 | 触发硬闸门，总分落 50 以下 |
+| Almost none (≤1 stray) | 85-95 | upward room |
+| A few (2-4, human-normal debt) | 75-85 | neutral |
+| At scale (≥5, or one major wish / AI fingerprint) | 45-60 | heavy drag, possible gates |
+| Flood (AI fingerprints everywhere) | ≤40 | gates trigger, total under 50 |
 
-**注意**：维度 4 权重 30。一处重大许愿或 AI 过程指纹足以压掉一个档位；触发硬闸门则总分直接封顶（G1→60、G3→45、G4→45、G1+G3/G4→40）——G3/G4/组合压在 60 分线以下，G1 落在及格线边缘，确保"AI 过程指纹成规模 = 不及格，不适合人类维护"这条 60 分流成立。**表面规范但设计荒谬——不要被注释/文档/命名/测试量骗了，回到信号 1（许愿）、信号 2/3（AI 过程指纹）、信号 4（结构 god）重罚。** 详细档位判定见 `scoring-rubric.md` 维度 4。
+**Note**: D4 weighs 30. One major wish or AI fingerprint can cost a whole tier; hard gates cap the total directly (G1→60, G3→45, G4→45, G1+G3/G4→40) — G3/G4/combo sit below the 60 line, G1 at the pass-line edge — making "AI fingerprints at scale = fail = unfit for human maintenance" hold as the 60-split. **Surface-neat but absurdly designed projects: don't be fooled by comments/docs/naming/test volume — return to signal 1 (wishes), signals 2/3 (AI fingerprints), signal 4 (structural gods) and punish there.** Detailed tiers: scoring-rubric.md D4.
 
-**取证模板**：报告里每条发现按 `文件:行号 —— 信号 X（<信号名>）：<具体描述>` 格式写。
+**Evidence format**: every finding in the report follows `file:line — signal N (<signal name>): <description>`.
