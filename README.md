@@ -1,11 +1,8 @@
-# HMAP
-> Human Maintainability Assessment of Programming Projects
-
-**A 60-point passing line: judging whether a project is worth handing over to human maintenance.**
-
-`HMAP` is a skill that assesses the **human maintainability** of a programming project, targeting Vibe Coding and AI-generated code. It outputs a 0–100 quantitative score with a nine-tier qualitative verdict. **Scores above 60 mean humans can participate in maintenance; below 60 suggests refactoring or handing it to AI.**
+# Human Maintainability Assessment of Programming Projects
 
 [English](README.md) | [中文](README.zh-CN.md)
+
+`HMAP` is a skill that assesses the **human maintainability** of a programming project, targeting Vibe Coding and AI-generated code. It outputs a 0–100 quantitative score with a nine-tier qualitative verdict. **Scores above 60 mean humans can participate in maintenance; below 60 suggests refactoring or handing it to AI.**
 
 ---
 
@@ -19,7 +16,6 @@ HMAP evaluates project code in depth from multiple angles:
 - Copy-pasted similar logic makes maintenance a struggle
 - README promises that don't match actual implementation
 - Temporary AI-generation markers and debug code left in production
-- ...
 
 The assessment is built on **13 objective metrics** and **hard structural gates** — it rejects vague "overall it's fine" judgments. If a project scores below 60, human programmers will find maintaining it confusing and painful.
 
