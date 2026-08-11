@@ -1,5 +1,4 @@
-# HMAP
-> Human Maintainability Assessment of Programming Projects
+# Human Maintainability Assessment of Programming Projects
 
 `HMAP`是一个评估编程项目的**人类可维护性**的skill，专门针对 Vibe Coding 与 AI 生成代码。输出 0–100 分量化评分与九档定性结论，**分数大于 60 分可人类参与维护，小于 60 分建议重构或使用AI维护。**
 
