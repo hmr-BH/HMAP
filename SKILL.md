@@ -30,7 +30,7 @@ Human Maintainability Assessment of Programming Projects —— 评估一个编�
 
 每维度按 0-100 打分，加权求和后套结构性硬闸门封顶。**打分细则（测量表 M1-M13、档位映射、RM 职责混杂协议、平局规则）见 [`references/scoring-rubric.md`](references/scoring-rubric.md)，信号清单见 [`references/ai-slop-signals.md`](references/ai-slop-signals.md)。**
 
-> **结构性硬闸门（及格线判定）**：存在使人类无法/极难维护的结构性事实时总分硬性封顶——核心 god-function/god-file 且职责混杂 → **60（及格线边缘）**；源码内联 AI 过程标记成规模 → **45**；热路径调试残留 ≥5 处 → **45**；**G1 与 G3/G4 同时命中 → 40**。维度加权再高也不得超过封顶。**闸门只判结构，与体量、人数、AI 来源无关**；AGENTS.md/CLAUDE.md 等顶层约定文件不算 AI 过程标记。
+> **结构性硬闸门（及格线判定）**：存在使人类无法/极难维护的结构性事实时总分硬性封顶——核心 god-function/god-file 且职责混杂 → **60（及格线边缘）**；源码内联 AI 过程标记成规模 → **45**；热路径 AI 排查残留 ≥5 处（坐标/偏移特判、魔法偏移、排查叙事内嵌、探针残留；**普通裸 println 不算**）→ **45**；**G1 与 G3/G4 同时命中 → 40**。维度加权再高也不得超过封顶。**闸门只判结构，与体量、人数、AI 来源无关**；AGENTS.md/CLAUDE.md 等顶层约定文件不算 AI 过程标记。
 
 ## 九档评分标准（60 分流：≥60 及格 = 人类可维护，<60 不及格 = 不适合人类直接维护）
 
