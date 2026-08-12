@@ -6,7 +6,7 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 
 **Core distinction**:
 - **Human-normal debt** (light penalty; never alone drops a project out of the 90s) = copy-paste, dead code, a few big files, a few dead exports, **semantic debt (SC/CV signals 12/13/15/16/17)** — universal in human projects.
-- **AI process fingerprints** (heavy penalty; can trigger hard gates) = AI-coding-process markers inlined in source, AI debugging residue in hot paths, systemic god-files/god-functions.
+- **AI process fingerprints** (heavy penalty; can trigger hard gates) = AI-coding-process markers inlined in source, AI debugging residue in hot paths, systemic god-files/god-functions, **flood-scale copy-paste** (≥6 template families, each with sync evidence).
 
 **Semantic signals are source-agnostic**: never ask whether AI or a human wrote them — ask only whether they mislead a maintainer or force call-site archaeology. They never trigger hard gates and are never auto-classified as AI fingerprints.
 
@@ -91,7 +91,7 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 **Counter-example**: `# loop over each item in the list` / `# if x is greater than 10, perform addition` — every line translated.
 **Positive example**: `# threshold is 10: below this is noise data, excluded from the sum` — explains why.
 
-**Linkage**: counted as R in D3 (fixed sampling frame + decision tree); **R-share >40% ⇒ 45 tier**.
+**Linkage**: counted as R in D3 (fixed sampling frame + decision tree); R-share 40-60% ⇒ −3 adjustment, >60% ⇒ −5; only **R-share >60% AND I<5** (restatement flood with zero why-payoff) drops D3 to the 45 tier.
 
 ---
 
@@ -102,7 +102,7 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 **Counter-example**: `import os, sys, json, random, hashlib` (sys/random/hashlib never used) + a "deprecated" function nothing calls.
 **Positive example**: no unused imports; deprecated logic deleted — git history preserves it.
 
-**Linkage**: human-normal-debt signal (DZ); commented-out code blocks ≥3 ⇒ D4 45 tier.
+**Linkage**: human-normal-debt signals (DZ ≥1 = 1 signal; commented-out code blocks CD ≥3 = 1 signal); they count toward D4's signal total but never trigger the 45 tier by themselves.
 
 ---
 
@@ -139,12 +139,12 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 
 ## Signal 11: copy-paste variants (DRY bankruptcy)
 
-**Identify**: multiple near-identical logic blocks differing only in params/naming, repeated across functions/files. Every variant is live and correct — but a bugfix must land in N places.
+**Identify**: multiple near-identical logic blocks differing only in params/naming, repeated across functions/files. Every variant is live and correct — but a bugfix must land in N places. **Count near-duplicates too**: the M5 procedure (rubric M5) mandates a two-pass merge — exact clones first, then structural twins (same control flow, only identifiers/literals/type names differ) — plus a reverse spot-check when the detector returns 0. A project whose duplication is structural (near-identical pages/components with different names) is NOT "zero copy-paste" just because no 6-line exact clone matched.
 
 **Counter-example**: `calc_price_a` vs `compute_price_b` — same logic, different names.
 **Positive example**: `def calc_price(items, tax_rate): return sum(item.price for item in items) * (1 + tax_rate)` — one reuse point.
 
-**Linkage**: counted per M5's fixed procedure and group definition (SIG ≥6-line Type-1 clones; all instances of one template = 1 group). **Systemic** (≥3 groups AND every change must sync ≥2 call sites) ⇒ D4 45 tier; below the "needs syncing" qualifier ⇒ human-normal debt, 70-85 tier only.
+**Linkage**: counted per M5's fixed procedure and group definition (SIG ≥6-line Type-1 clones; near-duplicate merge mandatory; all instances of one template = 1 group). **Three levels**: non-systemic (<3 families, or no sync evidence) = 1 debt signal; **systemic** (≥3 families AND every change must sync ≥2 sites — OR a single mega-family of any instance count, e.g. a 50-copy UI/toast template) = 2 debt signals ("heavy debt", 70-85 band only, never the 45 tier); **flood-scale** (≥6 families, each with sync evidence) = fingerprint ⇒ D4 45 tier. **Instance count alone never reaches the 45 tier** — a mega-family is real debt, not AI-process residue. **Parallel-architecture exemption**: families organized one-variant-per plugin/provider/platform/loader, each variant carrying real differences (URLs, manifests, vendor quirks), are idiomatic symmetry — NOT systemic even when the sync condition holds (1 debt signal regardless of family size).
 
 ---
 
@@ -157,7 +157,7 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 **Counter-example**: `LyricData` holding only track metadata while the actual lyrics live in `LyricInput` — the authoritative "lyric data" name sits on the wrong type; `def get_total(items): return sum(items) / len(items)` — named "total", actually "average".
 **Positive example**: `TrackMetadata` holding metadata, `LyricLine` holding lyric lines — the name says what's inside; or a deliberate rename with zero stale references left.
 
-**Linkage**: `SI1_viol` ≥2 = 1 SC signal (D4), ≥5 ⇒ D4 45 tier; D3: ≥2 ⇒ 45 tier, ≥4 ⇒ 20 tier.
+**Linkage**: `SI1_viol` ≥2 = 1 SC signal (D4, human-normal debt); the tier impact is carried by D3: ≥2 ⇒ 45 tier, ≥4 ⇒ 20 tier.
 
 ---
 
@@ -171,7 +171,7 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 **Positive example**: one dominant idiom with occasional justified, documented deviations.
 **Exclusions (not signals)**: language-mandated duality (e.g. Swift `throws` + `Result` at API boundaries), framework-required patterns, a documented migration in progress.
 
-**Linkage**: CV ≥1 concern = 1 D4 signal; CV ≥2 concerns ⇒ D4 45 tier. **≥2 mutually exclusive naming conventions within ONE file ⇒ confirmed even without the census.**
+**Linkage**: CV ≥1 concern = 1 D4 signal (human-normal semantic debt; never a 45-tier trigger by itself). **≥2 mutually exclusive naming conventions within ONE file ⇒ confirmed even without the census.**
 
 ---
 
@@ -197,7 +197,7 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 
 **Exclusions (not signals)**: serialization/API payloads mirroring a wire format, dynamic key access, framework-mandated members, documented public API surface consumed by downstream clients.
 
-**Linkage**: `SI2_unconsumed` ≥3 = 1 SC signal, ≥5 ⇒ D4 45 tier; `SI2_trap` ≥1 = 1 SC signal (every trap misleads someone), ≥3 ⇒ 45 tier; half-implemented switches also feed D1's `P_placeholder` — a capability the contract advertises but the code doesn't deliver.
+**Linkage**: `SI2_unconsumed` ≥3 = 1 SC signal (human-normal debt); `SI2_trap` ≥1 = 1 SC signal (every trap misleads someone), **≥3 ⇒ D4 45 tier** (live-looking dead switches at scale actively betray maintainers); half-implemented switches also feed D1's `P_placeholder` — a capability the contract advertises but the code doesn't deliver.
 
 ---
 
@@ -212,7 +212,7 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 
 **Exclusions (legitimate affix pairs, not signals)**: Request/Response, Input/Output, Query/Command, Create/Update, Read/Write, Get/Set, Add/Remove, Start/Stop, Open/Close — paired roles of ONE operation, not competing authorities.
 
-**Linkage**: `SI3_pairs` ≥2 = 1 SC signal, ≥4 ⇒ D4 45 tier; ≥2 ⇒ D2 ext_doc yellow evidence (tracing a concept first requires discovering which representation is authoritative).
+**Linkage**: `SI3_pairs` ≥2 = 1 SC signal (human-normal debt); ≥2 ⇒ D2 ext_doc yellow evidence (tracing a concept first requires discovering which representation is authoritative).
 
 ---
 
@@ -227,7 +227,7 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 
 **Exclusions (not signals)**: standard vocabulary of the project's field (`vertex` in a graphics project), framework-conventional names, values documented at the declaration site.
 
-**Linkage**: `SI4_unrooted` ≥3 = 1 SC signal, ≥5 ⇒ D4 45 tier; D3: ≥3 ⇒ 45 tier; ≥1 at a core symbol ⇒ D2 ext_doc yellow evidence.
+**Linkage**: `SI4_unrooted` ≥3 = 1 SC signal (human-normal debt); D3: ≥3 ⇒ 45 tier; ≥1 at a core symbol ⇒ D2 ext_doc yellow evidence.
 
 ---
 
@@ -235,11 +235,12 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 
 | Signal density | D4 reference | Total impact (weight 30) |
 |---|---|---|
-| Almost none (≤1 stray) | 85-95 | upward room |
-| A few (2-4, human-normal debt) | 75-85 | neutral |
-| At scale (≥5, or one major wish / AI fingerprint) | 45-60 | heavy drag, possible gates |
-| Flood (AI fingerprints everywhere) | ≤40 | gates trigger, total under 50 |
+| Almost none (≤2 stray, all debt) | 88-90 | upward room |
+| A few (3-4, all human-normal debt) | 80-82 | neutral |
+| Debt at scale (≥5, still zero fingerprints) | 70-78 | mild drag — debt alone never fails a project |
+| Any fingerprint over threshold (flood-scale CP / wish betrayal / AI residue / hallucinated comments / error swallowing / trap floods) | 45-55 | heavy drag |
+| Flood (fingerprints across ≥3 categories, or M/H/E_ai at flood scale) | ≤30 | gates trigger, total lands 20-40 |
 
-**Note**: D4 weighs 30. One major wish or AI fingerprint can cost a whole tier; hard gates cap the total directly (G1→60, G3→45, G4→45, G1+G3/G4→40) — G3/G4/combo sit below the 60 line, G1 at the pass-line edge — making "AI fingerprints at scale = fail = unfit for human maintenance" hold as the 60-split. **Surface-neat but absurdly designed projects: don't be fooled by comments/docs/naming/test volume — return to signal 1 (wishes), signals 2/3 (AI fingerprints), signal 4 (structural gods) and punish there.** **Semantic debt (signals 12/13/15/16/17) is source-agnostic and never gate-triggering** — at scale it drags the total through D4's 45 tier (SC ≥3 signals / CV ≥2 concerns). Detailed tiers: scoring-rubric.md D4.
+**Note**: D4 weighs 30. One major wish or AI fingerprint can cost a whole tier; hard gates cap the total directly (G1→60, G3→45, G4→45, G1+G3/G4→40) — G3/G4/combo sit below the 60 line, G1 at the pass-line edge — making "AI fingerprints at scale = fail = unfit for human maintenance" hold as the 60-split. **Surface-neat but absurdly designed projects: don't be fooled by comments/docs/naming/test volume — return to signal 1 (wishes), signals 2/3 (AI fingerprints), signal 4 (structural gods) and punish there.** **Semantic debt (signals 12/13/15/16/17) is source-agnostic and never gate-triggering** — it drags the total through D4's signal counting (debt band, floor 70); only SI2_trap at scale (≥3) reaches the 45 tier. Ambiguous classification defaults to human-normal debt — a fingerprint needs positive artifact evidence. Detailed tiers: scoring-rubric.md D4.
 
 **Evidence format**: every finding in the report follows `file:line — signal N (<signal name>): <description>`.

@@ -42,9 +42,9 @@ Subject: `quill`, a Python CLI static-site generator. 64 source files / 8,120 LO
 
 - N_mixed = 0 (RM above). Cycles: none. ext_doc: no — dataflow reconstructable from code; symbol level clean per M14 (SI4_unrooted = 0, SI3_pairs = 0, M15 = 0 ⇒ no yellow evidence).
 - **T_trace**: 3 journeys probed — `quill build`: `cli.py` → `engine.py` → `stages.py` → disk = 3 hops; `quill serve`: 3 hops; `quill deploy`: 2 hops ⇒ max 3 ⇒ **yellow**.
-- **T_impact**: most-called business functions: `render_page` 4 call sites, `load_config` 5, `register_stage` 3 (logger/error-helper fan-out excluded per lens) ⇒ 5; a typical feature change (new stage type) touches 3 files ⇒ max(5,3) = 5 ⇒ **yellow**.
+- **T_impact (lockstep change-surface lens)**: two representative changes probed — adding a new stage type touches `stages.py` + `engine.py` + `plugins/__init__.py` = 3 files; adding a CLI flag touches `cli.py` + `config.py` = 2 ⇒ max 3 ⇒ **yellow**. (Corroborating call-site counts — `render_page` 4, `load_config` 5 — are stable-contract consumers; they corroborate but never decide: no signature change forces lockstep edits beyond those 3 files.)
 - **ND_max**: deepest control-flow chain = 3 (`stages.py:dispatch`), closures restart per lens ⇒ green.
-- **Params**: 1 function with 8 required params (`engine.render(...)`) ⇒ **yellow** (≤2).
+- **Params**: 1 function with 8 required params (`engine.render(...)`) ⇒ **yellow** (1-14).
 - Tier: 3 yellows ⇒ 90 − 3×2.5 = 82.5 → round half up ⇒ **83**. Adjustments: core hard spots carry why-comments → +1; M15 = 0 → +1 (within the ±2 cap) ⇒ **85**.
 - **Boundary record #1**: journey `quill build` — whether `engine.py`'s internal helper module counts as a hop was disputed (3 vs 4). Decision: the helper only reformats data in transit, same dataflow ⇒ not a hop ⇒ 3 hops. Either way yellow (4 still ≤5) — no tier straddle, no midpoint needed. Evidence: `quill/engine.py:88-140`.
 
@@ -73,12 +73,12 @@ G1: RM single ⇒ no. G3: M=0 ⇒ no. G4: E_ai=0 ⇒ no. **No caps.**
 
 - 60-split: clearly ≥60 side; total 89 agrees. ✓
 - Core question: "would you maintain quill yourself?" — yes: traceable, tested, one big-but-clean pipeline file. Total agrees. ✓
-- Calibration: profile ≈ "big but well-organized, slightly weaker" (~84) to "lovingly maintained" (90-93); 89 sits between, deviation ≤3 from the nearer band ⇒ no recheck needed.
+- Calibration: profile sits between "lovingly human-maintained" (90-95) and "big but well-organized, mature OSS" (80-90); 89 sits within 3 of the seam ⇒ no recheck needed.
 
 ## What this example demonstrates
 
 1. **Big file ≠ penalty**: 1,940-line `pipeline.py` goes through RM, comes out single-responsibility, and never enters D2's yellow/red — line counts alone would have wrongly triggered G1.
 2. **Boundary records beat gut rounding**: two disputed classifications recorded with evidence; neither straddled a tier after inspection — but had one straddled (e.g. R-share exactly at 40%), rule 8's midpoint applies, not systematic down-rounding.
-3. **Lenses matter**: excluding logger fan-out from T_impact and counting only required params are what keep D2 reproducible.
+3. **Lenses matter**: measuring T_impact as lockstep change surface (not API popularity) and counting only required params are what keep D2 reproducible.
 4. **D4 stays mechanical**: 1 signal, human-debt class, zero fingerprints ⇒ 90 — no negotiation.
 5. **SCA exclusions are where reproducibility lives**: `toc_depth` looked like a dead contract element and would have been counted on impression; the documented-public-API exclusion (recorded as boundary record #3) is what keeps two evaluators landing on the same SI2_unconsumed = 0.

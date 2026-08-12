@@ -1,6 +1,6 @@
 ---
 name: human-maintainability
-version: 1.1.0
+version: 1.1.1
 description: "Assess a programming project's HUMAN maintainability (HMAP): 0-100 score, nine-tier verdict, per-dimension scores, and file:line evidence — built to catch vibe-coding / AI-generated slop, including semantic incoherence (name/contract/concept/vocabulary drift). Triggers: assess maintainability / rate this project / code quality score / readability score / AI slop detection / vibe coding check / semantic consistency check / HMAP / human maintainability / 评估项目可维护性 / 给项目打分 / 代码质量评估 / 可读性评分 / AI屎山检测 / vibe coding 体检 / 是否适合人类维护 / 语义一致性. Anti-trigger: the user asks to fix, refactor, optimize, or write code — that is a different task; this skill only assesses, never modifies."
 ---
 
@@ -20,6 +20,8 @@ Human Maintainability Assessment of Programming Projects — scores whether a pr
 > **Read before scoring**: this is a **human readability & maintainability** assessment, not a style-compliance review — comment coverage, naming consistency, DRY and similar "standards" earn no points by themselves, only when they serve human understanding and maintenance. **Core question**: after reading the code, ask yourself "if this project were handed to you, would you maintain it yourself? Why?" The total score must agree with the answer.
 >
 > **Black cat, white cat — equal treatment**: AI authorship, project size, and maintainer count are NEVER scoring criteria — only whether the artifact obstructs human maintenance. READMEs are checked only for promise fulfillment (tidiness/ads/marketing/absence are not penalized).
+>
+> **Use the full 0-100 range**: human-normal debt alone never fails a project (debt floors D2/D4 at 70; good projects with only debt land 80+), and the 0-40 bands are real landing zones — a slop pile (gods + fingerprints + broken promises + unreadable) SHOULD total 20-40. Do not cluster everything at 45-80.
 
 | Dimension | Weight | Key question |
 |---|---|---|
