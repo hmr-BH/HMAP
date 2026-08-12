@@ -231,6 +231,28 @@ The forensics list for D4 (AI slop & wishful-thinking residue). Each signal give
 
 ---
 
+## Signal 18: deterministic runtime defects (M16 16b)
+
+**Identify**: statically confirmable crash paths in core paths — undefined names/attributes, division by zero, missing `await` / dropped coroutines, argument misalignment (wrong positional order, wrong count), index/count errors, always-true/false comparisons that silently disable a documented feature. These are not "edge cases": a maintainer hits them on the first run.
+
+**Counter-example**: `if(song != None or song.title != None)` — short-circuits to `song.title` on `None` → guaranteed AttributeError 500 on the not-found path.
+**Positive example**: `if song is not None:` — the intended guard.
+
+**Linkage**: counted per M16 16b (core-path crash sites only). **≥5 = 1 maintenance-danger fingerprint** (a crash pile cannot be safely changed), **≥10 = 1 more signal**; feeds D2's "core feature silently broken" red (≥2 broken features); D1: M16 class hits stack toward the 20 tier.
+
+---
+
+## Signal 19: security anti-patterns (M16 16c)
+
+**Identify**: `eval`/`exec` on network or user input, `shell=True` with concatenated user input, hardcoded credentials (bot token / password / API key) committed to the repo, TLS verification disabled, unauthenticated management endpoints (cron/admin/SSRF surfaces). A maintainer inherits an active security incident, not a debt.
+
+**Counter-example**: `eval(body)` on a JSONP response; `values.py` with a real Telegram bot token committed; `ssl._create_unverified_context()` with no comment.
+**Positive example**: credentials via environment variables, `json.loads` instead of `eval`, TLS verification on.
+
+**Linkage**: counted per M16 16c. **≥2 = 1 maintenance-danger fingerprint** (≥5 = 1 more signal); triggers the D4 45 tier directly; D1: M16 class hits stack toward the 20 tier.
+
+---
+
 ## Aggregate judgment
 
 | Signal density | D4 reference | Total impact (weight 30) |

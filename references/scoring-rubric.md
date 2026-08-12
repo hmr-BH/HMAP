@@ -21,7 +21,7 @@
 | Step | Action | Output |
 |---|---|---|
 | S1 | Parse args; inventory per SKILL.md Step 2/3; fix sampling scope (same depth across runs) | file list, sampling declaration |
-| S2 | Run the global measurement table M1-M15 | reproducible numbers |
+| S2 | Run the global measurement table M1-M16 | reproducible numbers |
 | S3 | Per dimension: measurements → tier table → base + adjustments | four raw scores |
 | S4 | Check hard gates G1/G3/G4 (multiple hits → lowest cap) | gate list |
 | S5 | Weighted = 0.25×D1 + 0.30×D2 + 0.15×D3 + 0.30×D4; total = min(weighted, cap); round to nine tiers | total + tier |
@@ -51,6 +51,7 @@ Measure before any scoring. Record `file:line` evidence along the way.
 | M13 | Circular dependencies | import/require graph; core-module cycles count (S7091/S7027; manually review JPA/polymorphism false positives) | D2 |
 | M14 | Semantic Coherence Audit (SCA) | **Fixed protocol — see the SCA section below**: run `references/semantic-surface.py` for extraction & candidates; adjudicate the top-15 most-referenced symbols (SI-1); review candidates (SI-2/3/4); convention census (CV). Outputs: `SI1_viol` / `SI2_unconsumed` / `SI2_trap` / `SI3_pairs` / `SI4_unrooted` / `CV` | D1/D2/D3/D4 |
 | M15 | Mutable global state census | Count module-level mutable variables, singletons with mutable fields, and init-order flags (`isInitialized`-style patterns). Exclude DI containers and immutable constants | D2 |
+| M16 | Deterministic defects & runnability | **Four classes, all statically verifiable** (count, don't adjudicate): **16a entry runnability** — the MAIN documented entry (README main command / main entry file) imports nonexistent modules, uses syntax incompatible with mainstream runtimes (Python 2 print), or cannot start; auxiliary commands that are broken do NOT count (that is 16b); **16b deterministic runtime defects** — statically confirmable crash paths in core paths (undefined names/attributes, division by zero, missing await / dropped coroutine, argument misalignment, index/count errors, comparisons that are always-true/false and silently disable a feature); **16c security anti-patterns** — eval/exec on network or user input, shell=True with concatenated user input, hardcoded credentials (token/password/API key) committed, TLS verification disabled, unauthenticated management endpoints; **16d dependency installability** — no dependency manifest, manifest missing imported packages, dependencies EOL or unusable on mainstream runtimes (Python 2, TensorFlow 1, deprecated packages, deleted git branches, fresh clone cannot build because generated/required files are gitignored). Record per-class hit counts with `file:line` | D1/D4 |
 
 > **RM candidacy**: functions ≥400 lines / files ≥1800 lines. The other M2/M3 buckets are distribution reference only, not penalty lines.
 > Measurement discipline: same commands and same sampling across runs; numbers recorded before impressions; the sheet ships with the report.
@@ -163,7 +164,7 @@ The sole execution judge of "big but single-responsibility (no penalty) vs big a
 | P_fail≥2 OR one performance promise actually adds overhead OR D≥5 OR tests all placeholder | 45 | 50 |
 | P_fail≥4 OR promises comprehensively fail OR absurd design | 20 | 25 |
 
-**Adjustments** (cap 95, floor 20): P_fail=0 AND P_placeholder=0 (all promises evidenced) → +2; T_assert/T_file≥3 with core coverage → +2; build works or CI routine → +1; T_placeholder≥3 → −3; tests all placeholder → −5; zero automated tests (T_file=0) → −5; not buildable and no CI → −3; D≥4 → −3.
+**Adjustments** (cap 95, floor 20): P_fail=0 AND P_placeholder=0 (all promises evidenced) → +2; T_assert/T_file≥3 with core coverage → +2; build works or CI routine → +1; T_placeholder≥3 → −3; tests all placeholder → −5; zero automated tests (T_file=0) → −5; not buildable and no CI → −3; D≥4 → −3; **M16 hits (deterministic defects & runnability) — 1 class → −5, 2 classes → −10; ≥3 classes → drop to the 20 tier (base 25). Forced-judgment linkage: 16a hit (entry cannot run) OR 16d hit that makes the project uninstallable/unrunnable on mainstream runtimes (Python 2 syntax, deleted dependency git branches, deps that no longer install) OR ≥3 M16 classes ⇒ the forced judgment must answer "cannot maintain safely" ⇒ total ≤40.** A 16d hit that merely misdeclares a package but still installs and runs (e.g. missing `install_requires` for an importable package) is a −5 only, no forced cap.
 
 **Tie-breaks**: P_fail between 1~2 ⇒ count as major (lower tier); pick table values, never invent intermediates; disputed "major" ⇒ major unless rebutted with evidence; undecidable performance claims ⇒ "unverified", lower tier (claimant bears the burden of proof); strong tests + absurd design ⇒ absurdity wins (lower tier), and recheck D4 for wishful thinking; **structure veto (anti-inflation): if G1 hits (structural god) or D2 lands in the red zone, D1 ≤70** — full promise-keeping earns no 80+.
 
@@ -196,6 +197,7 @@ The sole execution judge of "big but single-responsibility (no penalty) vs big a
 | Functions with >7 required params | 0 | 1-14 | ≥15 |
 | Circular deps (core) | none | 1-2 core cycles, or non-core | ≥3 core cycles (manual review first) |
 | ext_doc needed (dataflow OR symbol level) | no | some modules / some core symbols | core unreconstructable from code, spans ≥3 files |
+| Core feature silently broken (M16 16b) | 0 | 1 | ≥2 (documented features verified dead: always-true/false guards, dead switches, broken comparison logic) — a hard red |
 
 **Tier counting**: no reds ⇒ 90 − 2.5 per yellow, rounded half up (1 yellow=88, 2=85, 3=83, 4=80), **floor 70** — accumulated yellows alone never fail D2. Any red ⇒ the red count sets the score: **1 red ⇒ 45, 2 reds ⇒ 40, ≥3 reds ⇒ 30**; yellows do NOT subtract further. If the red is N_mixed ⇒ G1: D2=45 and the total is separately capped at 60.
 
@@ -271,8 +273,10 @@ The sole execution judge of "big but single-responsibility (no penalty) vs big a
 | TODO empty/stale | M11 | ≥5 = 1 signal |
 | SC semantic-coherence violations | M14's SI1/SI2/SI3/SI4 | per-invariant thresholds in the SCA section (each crossed invariant = 1 signal, max 4); debt — only **SI2_trap ≥3 → 45** |
 | CV convention entropy | M14's convention census (signal 13's procedure) | ≥1 concern = 1 signal (debt; never a 45-tier trigger by itself) |
+| Sec security anti-patterns | M16's 16c (eval on network/user input, shell=True concatenation, committed credentials, TLS disabled, unauthenticated admin endpoints) | **≥1 committed credential OR ≥2 other anti-patterns** = 1 **fingerprint** signal (a maintainer inherits an active security incident; a leaked credential is the one irreversible case — single occurrence counts); ≥5 = 1 more signal |
+| Det deterministic runtime defects | M16's 16b (statically confirmable crash paths in core paths) | ≥5 = 1 **fingerprint** signal (a codebase with a crash pile cannot be safely changed); ≥10 = 1 more signal |
 
-**Counting**: each category with ≥1 hit = 1 signal (multiple hits in one category still 1 signal, but over-threshold fingerprint hits trigger the 45 tier directly; systemic CP counts as 2 signals per the table). **Human-normal debt** = non-systemic CP, systemic CP (2 signals), best-effort catches, E_debug, CD, DZ, TODOs, occasional big files, **SC/CV semantic debt** (source-agnostic: counted as ordinary signals, never auto-fingerprints). **AI process fingerprints** = M, E_ai, W, **flood-scale CP**, G1 hits, H, error-swallowing catches. **Ambiguous classification ⇒ human-normal debt** (rule 4): a fingerprint needs positive artifact evidence; conservative defaults survive only in hard-gate judgments.
+**Counting**: each category with ≥1 hit = 1 signal (multiple hits in one category still 1 signal, but over-threshold fingerprint hits trigger the 45 tier directly; systemic CP counts as 2 signals per the table). **Human-normal debt** = non-systemic CP, systemic CP (2 signals), best-effort catches, E_debug, CD, DZ, TODOs, occasional big files, **SC/CV semantic debt** (source-agnostic: counted as ordinary signals, never auto-fingerprints). **AI process fingerprints** = M, E_ai, W, **flood-scale CP**, G1 hits, H, error-swallowing catches. **Maintenance-danger fingerprints** (source-agnostic but fatal to safe maintenance) = Sec (security anti-patterns ≥2), Det (deterministic defect pile ≥5). **Ambiguous classification ⇒ human-normal debt** (rule 4): a fingerprint needs positive artifact evidence; conservative defaults survive only in hard-gate judgments.
 
 **Measurement → tier**:
 
@@ -281,7 +285,7 @@ The sole execution judge of "big but single-responsibility (no penalty) vs big a
 | ≤2 signals, all human-normal debt, zero fingerprints | 90 | 90 |
 | ≥3 signals, all human-normal debt, zero fingerprints | 70-85 | 88 − signals×2, **floor 70** |
 | 1 isolated fingerprint (no other signals) | 70-85 | 80 |
-| Any fingerprint over threshold: M≥3 / E_ai≥3 / W≥2 / **CP at flood scale** / C≥5 / H≥3 / SI2_trap≥3 — or 1 fingerprint + ≥1 other signal — or G1 hit | 45 | 50 |
+| Any fingerprint over threshold: M≥3 / E_ai≥3 / W≥2 / **CP at flood scale** / C≥5 / H≥3 / SI2_trap≥3 / **Sec≥2 / Det≥5** — or 1 fingerprint + ≥1 other signal — or G1 hit | 45 | 50 |
 | Flood: M across the core / E_ai≥5 (→G4) / W≥4 / H≥5 / ≥3 fingerprint categories | 20 | 25 |
 
 **Human-normal debt alone never leaves the 70-85 band** — no fail-by-debt. The 45 tier requires at least one fingerprint; the 20 tier requires flood.
@@ -306,6 +310,7 @@ When the subject's profile resembles a row below, the score should land in the r
 | AI fingerprints at scale (G3 or G4 hit) | 40-45 |
 | Structural gods + AI fingerprints (G1+G3/G4) | 35-42 |
 | Slop pile: gods + fingerprints + broken promises + unreadable | 20-35 |
+| Deterministic-defect pile / security anti-patterns / entry not runnable (M16 ≥3 classes) | 25-45 |
 | Beyond rescue | <20 |
 
 > **60-line semantics**: profiles at ≥60 = human-maintainable (if painful); <60 = not fit for direct human maintenance. This is the skill's anchor — the evaluator must state which side their judgment lands on; conflicts resolve to the judgment.
@@ -319,7 +324,7 @@ When the subject's profile resembles a row below, the score should land in the r
 ## Consistency self-check (two runs converge within ≤3)
 
 Totals differing by >3 ⇒ check in order (**no bargaining over totals**):
-1. Compare M1-M15 sheets (especially M8/M9 exclusion lenses, M10 wordlist, M14 adjudication sample) ⇒ rerun commands on mismatch.
+1. Compare M1-M16 sheets (especially M8/M9 exclusion lenses, M10 wordlist, M14 adjudication sample) ⇒ rerun commands on mismatch.
 2. Compare sampling scopes ⇒ the deeper one wins.
 3. Compare RM domain assignments ⇒ per-sub-domain evidence + binding precedents.
 4. Compare red/yellow/green counts and tiers ⇒ **compare both sides' boundary records item by item and re-verify the evidence** (rule 8).
